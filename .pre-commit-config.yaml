@@ -87,6 +87,18 @@ repos:
         name: Forbid unencrypted Kubernetes secrets
 
   # ----------------------------------------------------------
+  # Lokalny guard — blokuje prywatne IP (RFC1918) w plaintext
+  # ----------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: no-plaintext-ips
+        name: Blokuje plaintext prywatne IPs (RFC1918)
+        entry: scripts/check-no-plaintext-ips.sh
+        language: script
+        types: [text]
+        exclude: '(\.sops\.ya?ml$|^scripts/check-no-plaintext-ips\.sh$)'
+
+  # ----------------------------------------------------------
   # Conventional Commits message validation
   # ----------------------------------------------------------
   - repo: https://github.com/compilerla/conventional-pre-commit
