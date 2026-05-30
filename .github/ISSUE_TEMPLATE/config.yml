@@ -1,0 +1,7 @@
+---
+# Konfiguracja wyboru szablonów issue
+blank_issues_enabled: true
+contact_links:
+  - name: Dokumentacja projektu
+    url: https://github.com/speedzenon/homelab/tree/main/docs
+    about: Sprawdź runbooki i ADR przed zgłoszeniem

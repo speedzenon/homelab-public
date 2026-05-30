@@ -1,0 +1,62 @@
+---
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Cotygodniowy pełny skan: poniedziałek 06:00 UTC
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ----------------------------------------------------------
+  # Gitleaks — pełny skan HISTORII (nie tylko bieżących plików)
+  # Łapie sekrety, które były dodane i usunięte w późniejszych commitach
+  # ----------------------------------------------------------
+  gitleaks:
+    name: Secret scanning (full history)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          # renovate: datasource=github-releases depName=gitleaks/gitleaks
+          GITLEAKS_VERSION="8.30.1"
+          wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+
+      - name: Scan repository history
+        run: gitleaks detect --source . --verbose --redact
+
+  # ----------------------------------------------------------
+  # Trivy — skan IaC pod kątem misconfiguration
+  # Na razie mało plików, ale gotowe na Terraform/k8s manifesty
+  # ----------------------------------------------------------
+  trivy:
+    name: IaC misconfiguration scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'

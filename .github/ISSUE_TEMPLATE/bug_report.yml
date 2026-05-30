@@ -1,0 +1,62 @@
+---
+name: Bug / problem
+description: Zgłoś coś, co nie działa jak powinno
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dzięki za zgłoszenie. Wypełnij poniższe pola, by ułatwić diagnozę.
+        **Pamiętaj — nie wklejaj sekretów, tokenów ani kluczy w logach.**
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Opis problemu
+      description: Co się dzieje? Co powinno się dziać zamiast tego?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Warstwa / komponent
+      description: Której części infrastruktury dotyczy problem?
+      options:
+        - Sieć (MikroTik, VLAN, WireGuard, Headscale)
+        - Hypervisor (Proxmox, ZFS, storage)
+        - Kubernetes (Talos, Cilium, ArgoCD)
+        - PKI / Secrets (Step-CA, OpenBao, ESO)
+        - IAM (Authentik, Pomerium)
+        - Security (Wazuh, Tetragon, Kyverno)
+        - Supply chain (Cosign, SBOM)
+        - Observability (Prometheus, Grafana, Loki)
+        - Backup / DR (Velero, PBS, B2)
+        - GitOps / CI (ArgoCD, Renovate, Actions)
+        - Inne
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Kroki do odtworzenia
+      description: Jak odtworzyć problem krok po kroku?
+      placeholder: |
+        1. Uruchom ...
+        2. Wykonaj ...
+        3. Zaobserwuj ...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logi / output
+      description: Wklej istotne logi (BEZ sekretów!)
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Środowisko
+      description: Wersje, host, kontekst (np. Talos v1.x, Proxmox 8.x)

@@ -1,0 +1,115 @@
+# =====================================================
+# OS-specific
+# =====================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =====================================================
+# Editor / IDE
+# =====================================================
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea/
+*.swp
+*.swo
+*~
+.netrwhist
+Session.vim
+
+# =====================================================
+# Terraform / OpenTofu
+# =====================================================
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!example.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# =====================================================
+# Ansible
+# =====================================================
+*.retry
+.ansible/
+ansible.log
+.vault_pass
+.vault_password
+
+# =====================================================
+# Kubernetes / Helm
+# =====================================================
+**/charts/*.tgz
+.helm/
+
+# =====================================================
+# Talos
+# =====================================================
+talosconfig
+*.talosconfig
+kubeconfig
+
+# =====================================================
+# Secrets & credentials (defense in depth)
+# Files matching these patterns CANNOT enter repo
+# =====================================================
+*.pem
+*.key
+!*.pub
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
+*.p12
+*.pfx
+*.csr
+*-keys.txt
+.env
+.envrc
+*.env
+!*.env.example
+
+# =====================================================
+# SOPS — decrypted files (defense in depth)
+# =====================================================
+*.dec.yaml
+*.dec.yml
+*.dec.json
+*.decrypted
+
+# =====================================================
+# Build artifacts
+# =====================================================
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+dist/
+build/
+target/
+
+# =====================================================
+# Logs
+# =====================================================
+*.log
+logs/
+
+# =====================================================
+# Pre-commit cache
+# =====================================================
+.cache/

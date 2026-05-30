@@ -1,0 +1,32 @@
+---
+# SOPS configuration
+# Defines which files get encrypted with which keys
+# Documentation: https://github.com/getsops/sops
+
+creation_rules:
+  # Talos secrets — entire content encrypted (machine config has secrets throughout)
+  - path_regex: 'talos/secrets/.*\.sops\.ya?ml$'
+    age: >-
+      age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2
+
+  # Talos configs — selective encryption of secret fields
+  - path_regex: 'talos/.*\.sops\.ya?ml$'
+    encrypted_regex: '^(machine|cluster|secrets|token|key|certificate|certificateKey|bootstrapToken)$'
+    age: >-
+      age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2
+
+  # Kubernetes secrets — encrypt only data/stringData fields
+  - path_regex: 'kubernetes/.*\.sops\.ya?ml$'
+    encrypted_regex: '^(data|stringData|password|token|key|secret|credentials)$'
+    age: >-
+      age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2
+
+  # Infrastructure variables (Terraform tfvars, Ansible vars) — full encrypt
+  - path_regex: 'infrastructure/.*\.sops\.(ya?ml|json|env)$'
+    age: >-
+      age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2
+
+  # Bootstrap secrets — full encrypt (one-time bootstrap credentials)
+  - path_regex: 'bootstrap/.*\.sops\.ya?ml$'
+    age: >-
+      age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2

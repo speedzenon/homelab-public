@@ -1,0 +1,97 @@
+---
+# Pre-commit hooks configuration
+# Docs: https://pre-commit.com
+# Update hook versions: pre-commit autoupdate
+
+# Default stages where hooks run
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
+repos:
+  # ----------------------------------------------------------
+  # Basic file hygiene (whitespace, EOF, merge conflicts, etc.)
+  # ----------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+        name: Ensure files end with newline
+      - id: check-merge-conflict
+        name: Check for merge conflict markers
+      - id: check-added-large-files
+        name: Prevent committing large files
+        args: ['--maxkb=2048']
+      - id: detect-private-key
+        name: Detect accidentally committed private keys
+      - id: check-yaml
+        name: Validate YAML syntax
+        args: ['--allow-multiple-documents']
+        exclude: '\.sops\.ya?ml$|/templates/'
+      - id: check-json
+        name: Validate JSON syntax
+      - id: check-executables-have-shebangs
+        name: Ensure executables have shebangs
+      - id: mixed-line-ending
+        name: Normalize line endings to LF
+        args: ['--fix=lf']
+
+  # ----------------------------------------------------------
+  # YAML linting (uses our .yamllint.yaml config)
+  # ----------------------------------------------------------
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        name: Lint YAML files
+        args: ['-c', '.yamllint.yaml', '--strict']
+
+  # ----------------------------------------------------------
+  # Secret detection — block credentials from entering repo
+  # ----------------------------------------------------------
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+        name: Detect hardcoded secrets
+
+  # ----------------------------------------------------------
+  # Shell script analysis
+  # ----------------------------------------------------------
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        name: Lint shell scripts
+
+  # ----------------------------------------------------------
+  # Markdown linting
+  # ----------------------------------------------------------
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.48.0
+    hooks:
+      - id: markdownlint
+        name: Lint Markdown files
+        args: ['--fix', '--config', '.markdownlint.yaml']
+
+  # ----------------------------------------------------------
+  # Prevent committing UNENCRYPTED SOPS files
+  # ----------------------------------------------------------
+  - repo: https://github.com/k8s-at-home/sops-pre-commit
+    rev: v2.1.1
+    hooks:
+      - id: forbid-secrets
+        name: Forbid unencrypted Kubernetes secrets
+
+  # ----------------------------------------------------------
+  # Conventional Commits message validation
+  # ----------------------------------------------------------
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        name: Validate commit message format
+        stages: [commit-msg]

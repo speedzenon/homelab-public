@@ -1,0 +1,58 @@
+---
+# yamllint configuration
+# Documentation: https://yamllint.readthedocs.io/
+
+extends: default
+
+rules:
+  # Line length - 200 chars instead of default 80
+  # Real-world infra YAML (k8s, terraform plans) often has long values
+  line-length:
+    max: 200
+    level: warning
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+
+  # Comments must have space after #
+  comments:
+    require-starting-space: true
+    min-spaces-from-content: 1
+
+  # Don't enforce '---' document start (k8s manifests sometimes omit)
+  document-start: disable
+
+  # Allow only 'true'/'false' as boolean truthy values
+  # Forbid 'yes'/'no'/'on'/'off' which are confusing
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false
+
+  # Indentation - 2 spaces, consistent
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+  # Empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  # Brackets - no spaces inside
+  brackets:
+    forbid: false
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+
+  # Trailing spaces — error level (NOT just warning)
+  trailing-spaces:
+    level: error
+
+ignore: |
+  .terraform/
+  *.sops.yaml
+  *.sops.yml
+  charts/
+  node_modules/

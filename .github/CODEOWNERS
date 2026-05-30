@@ -1,0 +1,26 @@
+# CODEOWNERS — automatyczne przypisanie reviewerów
+# Składnia: <pattern> <@owner>
+# Ostatnia pasująca reguła wygrywa (szczegółowe reguły niżej)
+# Dokumentacja: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# Domyślny właściciel całego repo
+* @speedzenon
+
+# ----------------------------------------------------------
+# Ścieżki krytyczne — wymagają szczególnej uwagi przy review
+# ----------------------------------------------------------
+
+# Konfiguracja CI/CD i community health files
+/.github/ @speedzenon
+
+# Skrypty bootstrap (Day-1, disaster recovery)
+/bootstrap/ @speedzenon
+
+# Konfiguracja szyfrowania sekretów
+/.sops.yaml @speedzenon
+
+# Zaszyfrowane sekrety bootstrap Talos
+/talos/secrets/ @speedzenon
+
+# Deklaratywna infrastruktura (OpenTofu, Ansible, MikroTik)
+/infrastructure/ @speedzenon

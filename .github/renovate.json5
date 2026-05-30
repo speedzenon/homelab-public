@@ -1,0 +1,56 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+
+  // Presety bazowe — sprawdzone zestawy ustawień od społeczności Renovate
+  extends: [
+    'config:recommended',                       // rozsądne defaulty
+    ':semanticCommits',                         // commity w formacie Conventional Commits
+    'schedule:nonOfficeHours',                  // PR-y poza godzinami pracy
+    'helpers:pinGitHubActionDigestsToSemver',   // pinuj Actions do SHA + komentarz wersji
+  ],
+
+  timezone: 'Europe/Warsaw',
+  labels: ['dependencies'],
+
+  // Limity, by nie zalać się PR-ami
+  prHourlyLimit: 4,
+  prConcurrentLimit: 10,
+
+  // Dashboard jako GitHub Issue — centralny widok wszystkich zależności
+  dependencyDashboard: true,
+  dependencyDashboardTitle: 'Renovate Dependency Dashboard',
+
+  packageRules: [
+    {
+      description: 'Grupuj aktualizacje minor i patch w jeden PR',
+      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      groupName: 'all non-major dependencies',
+    },
+    {
+      description: 'Auto-merge pinów SHA dla GitHub Actions (niskie ryzyko)',
+      matchManagers: ['github-actions'],
+      matchUpdateTypes: ['digest', 'pin'],
+      automerge: true,
+    },
+    {
+      description: 'Major updates — wyraźna etykieta, ostrożny review',
+      matchUpdateTypes: ['major'],
+      addLabels: ['major-update'],
+    },
+  ],
+
+  customManagers: [
+    {
+      customType: 'regex',
+      description: 'Aktualizuj zmienne *_VERSION oznaczone komentarzem # renovate:',
+      managerFilePatterns: [
+        '/\\.ya?ml$/',
+        '/\\.sh$/',
+        '/Makefile$/',
+      ],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\w+_VERSION\\s*=\\s*"?(?<currentValue>[^"\\s]+)"?',
+      ],
+    },
+  ],
+}

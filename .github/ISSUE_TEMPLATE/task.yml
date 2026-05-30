@@ -1,0 +1,48 @@
+---
+name: Zadanie / usprawnienie
+description: Nowy komponent, usprawnienie lub zadanie do wykonania
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Cel
+      description: Co ma zostać zrobione i po co?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Faza projektu
+      description: Do której fazy należy to zadanie?
+      options:
+        - Phase 1 — Sieć
+        - Phase 2 — Hypervisor + storage
+        - Phase 3 — Kubernetes
+        - Phase 4 — PKI + secrets
+        - Phase 5 — IAM + zero trust
+        - Phase 6 — Security detection
+        - Phase 7 — Supply chain
+        - Phase 8 — Observability
+        - Phase 9 — Backup / DR
+        - Phase 10 — Workloady
+        - Cross-cutting / inne
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Kryteria akceptacji (Definition of Done)
+      description: Po czym poznasz, że zadanie jest ukończone?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Uwagi / kontekst
+      description: Linki, zależności, ryzyka, powiązane issue

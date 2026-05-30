@@ -1,0 +1,23 @@
+---
+# markdownlint configuration
+# Rule reference: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# MD013: Line length — disable (infra docs have long lines, tables, URLs)
+MD013: false
+
+# MD033: Inline HTML — allow (sometimes needed for formatting)
+MD033: false
+
+# MD041: First line should be top-level heading — allow flexibility
+MD041: false
+
+# MD024: Multiple headings with same content — allow (common in changelogs)
+MD024:
+  siblings_only: true
+
+# MD026: Trailing punctuation in heading — allow
+MD026: false
+
+# MD060: Table column style — disable (pipe spacing is cosmetic,
+# renders identically across all Markdown engines)
+MD060: false
