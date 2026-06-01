@@ -5,5 +5,9 @@ terraform {
       source  = "terraform-routeros/routeros"
       version = "~> 1.9"
     }
+    sops = {
+      source  = "carlpett/sops"
+      version = "~> 1.0"
+    }
   }
 }
