@@ -4,6 +4,7 @@ name: CI
 # Triggery: każdy PR oraz push do main
 on:
   pull_request:
+    types: [opened, edited, synchronize, reopened]
   push:
     branches: [main]
 
