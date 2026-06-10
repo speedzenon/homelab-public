@@ -1,0 +1,8 @@
+# install.image: installer z Image Factory z TYM SAMYM schematic id co obraz
+# boot (qemu-guest-agent + iscsi-tools + util-linux-tools). Dzieki temu
+# upgrade'y (talosctl upgrade) zachowuja system extensions.
+# Schematic id jest publiczny - moze byc plaintextem (hook blokuje tylko IP).
+machine:
+  install:
+    disk: /dev/sda
+    image: factory.talos.dev/installer/53513e54bb39202f35694412577a6bc53d484744d35a126e5d42ef34785c0d83:v1.12.6

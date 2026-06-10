@@ -1,0 +1,19 @@
+# Szablon renderowany w 'just talos-apply' (envsubst). Pelna konfiguracja
+# sieci w machine config = source of truth; nocloud sluzyl tylko do
+# maintenance mode. deviceSelector physical zamiast zgadywania nazwy NIC.
+# VIP (.20) wedruje miedzy CP po elekcji etcd - aktywny PO bootstrapie.
+machine:
+  network:
+    interfaces:
+      - deviceSelector:
+          physical: true
+        dhcp: false
+        addresses:
+          - ${NODE_IP}/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${GW}
+        vip:
+          ip: ${VIP}
+    nameservers:
+      - ${DNS}
