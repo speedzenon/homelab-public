@@ -1,0 +1,33 @@
+# Cilium na Talosie (klaster stawiany z cni=none + proxy disabled):
+# - kubeProxyReplacement: Cilium przejmuje role kube-proxy (eBPF)
+# - k8sServiceHost/Port: KubePrism, lokalny LB Talosa do apiservera
+#   (localhost:7445) - bez tego agent traci API przy padzie CP
+# - capabilities: wymagane na Talosie zamiast privileged
+# - cgroup: Talos sam montuje cgroupv2, wylaczamy autoMount
+ipam:
+  mode: kubernetes
+kubeProxyReplacement: true
+k8sServiceHost: localhost
+k8sServicePort: 7445
+securityContext:
+  capabilities:
+    ciliumAgent:
+      - CHOWN
+      - KILL
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cleanCiliumState:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup

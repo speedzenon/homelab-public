@@ -82,3 +82,23 @@ talos-dmesg node="talos-lab-cp1":
     set -euo pipefail
     NODE_IP=$(sops -d --extract '["k8s_clusters"]["lab"]["nodes"]["{{node}}"]["ip"]' {{net}})
     talosctl dmesg -f -n "$NODE_IP" -e "$NODE_IP"
+
+# --- Git workflow ---
+feat name:
+    git switch main && git pull && git switch -c feat/{{name}}
+
+pr:
+    git push -u origin HEAD
+    gh pr create --title "$(git log -1 --pretty=%s)" --body ""
+
+done:
+    git switch main && git pull && git fetch --prune
+
+cilium_ver := "1.19.4"
+
+cilium-install:
+    helm repo add cilium https://helm.cilium.io/ --force-update
+    helm upgrade --install cilium cilium/cilium \
+        --version {{cilium_ver}} \
+        --namespace kube-system \
+        --values kubernetes/bootstrap/cilium/values.yaml
