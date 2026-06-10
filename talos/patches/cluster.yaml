@@ -1,0 +1,10 @@
+# Warstwa klastra (wspolna). CNI=none + proxy off: Cilium wejdzie osobno
+# jako CNI z kube-proxy replacement. Control-plane'y schedulowalne -
+# topologia laba to 3xCP bez dedykowanych workerow.
+cluster:
+  network:
+    cni:
+      name: none
+  proxy:
+    disabled: true
+  allowSchedulingOnControlPlanes: true
