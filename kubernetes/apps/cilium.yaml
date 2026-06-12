@@ -1,0 +1,29 @@
+# Adopcja Cilium pod ArgoCD (multi-source):
+# - zrodlo 1: chart z helm.cilium.io (ta sama wersja co instalacja helm CLI)
+# - zrodlo 2: to repo jako 'ref' -> values z kubernetes/bootstrap/cilium/
+# Sync POCZATKOWO reczny: najpierw App Diff, potem Sync (adopcja pod kontrola);
+# automated wlaczamy osobnym PR po udanej adopcji.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://helm.cilium.io
+      chart: cilium
+      targetRevision: 1.19.4
+      helm:
+        releaseName: cilium
+        valueFiles:
+          - $values/kubernetes/bootstrap/cilium/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
