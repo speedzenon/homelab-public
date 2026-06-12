@@ -94,6 +94,7 @@ pr:
 done:
     git switch main && git pull && git fetch --prune
 
+# --- Cilium
 cilium_ver := "1.19.4"
 
 cilium-install:
@@ -102,3 +103,20 @@ cilium-install:
         --version {{cilium_ver}} \
         --namespace kube-system \
         --values kubernetes/bootstrap/cilium/values.yaml
+
+# --- ArgoCD
+argocd_ver := "9.5.20"
+
+argocd-install:
+    helm repo add argo https://argoproj.github.io/argo-helm --force-update
+    helm upgrade --install argocd argo/argo-cd \
+        --version {{argocd_ver}} \
+        --namespace argocd --create-namespace \
+        --values kubernetes/bootstrap/argocd/values.yaml
+    kubectl apply -f kubernetes/bootstrap/argocd/root-app.yaml
+
+argocd-password:
+    @kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
+
+argocd-ui:
+    kubectl -n argocd port-forward svc/argocd-server 8080:80
