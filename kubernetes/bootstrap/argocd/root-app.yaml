@@ -1,0 +1,23 @@
+# App-of-apps: korzen drzewa aplikacji. Argo obserwuje kubernetes/apps/
+# w tym repo (publiczne -> zero credentiali) i sam tworzy/usuwa Application-y.
+# Nowa aplikacja w klastrze = nowy plik w kubernetes/apps/ przez PR.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/speedzenon/homelab-public.git
+    targetRevision: main
+    path: kubernetes/apps
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

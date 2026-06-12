@@ -1,0 +1,9 @@
+# ArgoCD bootstrap (helm chart argo/argo-cd).
+# - dex wylaczony: SSO dopiero z Authentikiem (wtedy OIDC bezposrednio)
+# - server.insecure: HTTP tylko wewnatrz klastra (ClusterIP, zero ekspozycji);
+#   TLS bedzie terminowany na gateway'u, do tego czasu dostep przez port-forward
+dex:
+  enabled: false
+configs:
+  params:
+    server.insecure: true
