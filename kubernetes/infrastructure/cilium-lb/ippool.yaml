@@ -1,0 +1,11 @@
+# Pula adresow LoadBalancer (LB-IPAM). Zakres = lb_pool z network.sops.yaml.
+# Jawne IP = SWIADOMA decyzja (RFC1918, nieosiagalne z internetu); zasob musi
+# byc plaintextem, by Argo nim zarzadzal. TODO: ksops/ESO przy fazie OpenBao.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: lab-pool
+spec:
+  blocks:
+    - start: 10.0.30.100  # allowlist-ip
+      stop: 10.0.30.199   # allowlist-ip

@@ -96,7 +96,7 @@ done:
 
 # --- Cilium
 cilium_ver := "1.19.4"
-
+# break-glass: tylko gdy ArgoCD lezy; normalnie zarzadza Argo
 cilium-install:
     helm repo add cilium https://helm.cilium.io/ --force-update
     helm upgrade --install cilium cilium/cilium \

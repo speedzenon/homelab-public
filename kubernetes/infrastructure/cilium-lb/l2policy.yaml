@@ -1,0 +1,9 @@
+# Rozglaszanie L2 (ARP) adresow LoadBalancer. Brak 'interfaces'/'nodeSelector'
+# = wszystkie interfejsy i wezly; lidera per-service wybiera lease.
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: lab-l2
+spec:
+  loadBalancerIPs: true
+  externalIPs: false
