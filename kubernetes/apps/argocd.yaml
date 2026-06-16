@@ -1,0 +1,30 @@
+# ArgoCD zarzadza samym soba (multi-source, ten sam wzorzec co cilium.yaml):
+# - zrodlo 1: chart argo/argo-cd (ta sama wersja co instalacja helm CLI)
+# - zrodlo 2: to repo jako 'ref' -> values z kubernetes/bootstrap/argocd/
+# automated CELOWO wylaczone: self-management to najryzykowniejsza adopcja
+# (kontroler aktualizuje sam siebie) - najpierw App Diff + reczny Sync,
+# automated wlaczamy osobnym PR po potwierdzeniu, ze diff = sama metadana.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://argoproj.github.io/argo-helm
+      chart: argo-cd
+      targetRevision: 9.5.20
+      helm:
+        releaseName: argocd
+        valueFiles:
+          - $values/kubernetes/bootstrap/argocd/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
