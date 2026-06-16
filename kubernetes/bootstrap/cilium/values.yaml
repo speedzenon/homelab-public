@@ -31,3 +31,16 @@ cgroup:
   autoMount:
     enabled: false
   hostRoot: /sys/fs/cgroup
+# L2 announcements: Cilium odpowiada ARP za adresy LoadBalancer z puli
+# CiliumLoadBalancerIPPool (kubernetes/infrastructure/cilium-lb/).
+l2announcements:
+  enabled: true
+# Lease'y L2 generuja staly ruch do API - podbity limit klienta (zalecenie docs)
+k8sClientRateLimit:
+  qps: 16
+  burst: 32
+# Zmiana ConfigMapy domyslnie NIE restartuje podow (ochrona CNI). W GitOps
+# chcemy, by zmiana values realnie wchodzila: checksum => kontrolowany roll.
+rollOutCiliumPods: true
+operator:
+  rollOutPods: true
