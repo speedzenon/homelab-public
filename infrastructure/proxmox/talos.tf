@@ -48,4 +48,6 @@ module "talos_lab" {
   ip_cidr       = "${each.value.ip}/${local.k8s_prefix}"
   gateway       = local.k8s_vlan.gateway
   vlan_id       = local.k8s_vlan.id
+  storage_vlan_id = local.net.vlans.storage.id
+  storage_mac     = each.value.storage_mac
 }

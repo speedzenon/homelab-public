@@ -60,5 +60,14 @@ resource "proxmox_virtual_environment_vm" "this" {
     vlan_id = var.vlan_id
   }
 
+  dynamic "network_device" {
+    for_each = var.storage_vlan_id == null ? [] : [1]
+    content {
+      bridge      = "vmbr0"
+      vlan_id     = var.storage_vlan_id
+      mac_address = var.storage_mac
+    }
+  }
+
   operating_system { type = "l26" }
 }
