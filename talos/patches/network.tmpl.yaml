@@ -1,12 +1,18 @@
 # Szablon renderowany w 'just talos-apply' (envsubst). Pelna konfiguracja
-# sieci w machine config = source of truth; nocloud sluzyl tylko do
-# maintenance mode. deviceSelector physical zamiast zgadywania nazwy NIC.
+# sieci w machine config = source of truth.
+# Selekcja interfejsow po MAC (hardwareAddr), NIE po physical:true - wezly
+# maja dwa NIC-i, wiec physical:true matchowalby OBA i konfiguracja eth0
+# (adres k8s + VIP) nalozylaby sie takze na interfejs storage.
+#   ${MAC}         = istniejacy MAC eth0 (odczytany z net0 w Proxmoksie)
+#   ${STORAGE_MAC} = deterministyczny MAC eth1 (net1, nadany w tofu z SOPS)
+# eth1: adres w nieroutowanym VLAN 50, BEZ 'routes' - jedyna default-route
+# zyje na eth0; interfejs storage to slepa uliczka do nas i tylko nas.
 # VIP (.20) wedruje miedzy CP po elekcji etcd - aktywny PO bootstrapie.
 machine:
   network:
     interfaces:
       - deviceSelector:
-          physical: true
+          hardwareAddr: "${MAC}"
         dhcp: false
         addresses:
           - ${NODE_IP}/24
@@ -15,5 +21,11 @@ machine:
             gateway: ${GW}
         vip:
           ip: ${VIP}
+      - deviceSelector:
+          hardwareAddr: "${STORAGE_MAC}"
+        dhcp: false
+        addresses:
+          - ${STORAGE_IP}/24
+        mtu: 1500
     nameservers:
       - ${DNS}
