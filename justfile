@@ -35,8 +35,11 @@ talos-apply node *flags:
     tmpdir=$(mktemp -d); trap 'rm -rf "$tmpdir"' EXIT
     NODE_IP=$(sops -d --extract '["k8s_clusters"]["lab"]["nodes"]["{{node}}"]["ip"]' {{net}})
     VIP=$(sops -d --extract '["k8s_clusters"]["lab"]["vip"]' {{net}})
+    MAC=$(sops -d --extract '["k8s_clusters"]["lab"]["nodes"]["{{node}}"]["mac"]' {{net}})
+    STORAGE_IP=$(sops -d --extract '["k8s_clusters"]["lab"]["nodes"]["{{node}}"]["storage_ip"]' {{net}})
+    STORAGE_MAC=$(sops -d --extract '["k8s_clusters"]["lab"]["nodes"]["{{node}}"]["storage_mac"]' {{net}})
     GW=$(sops -d --extract '["vlans"]["k8s"]["gateway"]' {{net}})
-    DNS="$GW"; export NODE_IP VIP GW DNS
+    DNS="$GW"; export NODE_IP MAC STORAGE_IP STORAGE_MAC VIP GW DNS
     sops exec-file --no-fifo {{tsecrets}} "talosctl gen config lab https://${VIP}:6443 \
         --with-secrets {} \
         --kubernetes-version {{k8sver}} \
@@ -44,7 +47,7 @@ talos-apply node *flags:
         --config-patch @$repo/talos/patches/machine-base.yaml \
         --output-types controlplane \
         --output $tmpdir/controlplane.yaml --force"
-    envsubst '${NODE_IP} ${GW} ${VIP} ${DNS}' < "$repo/talos/patches/network.tmpl.yaml" > "$tmpdir/net.yaml"
+    envsubst '${NODE_IP} ${MAC} ${STORAGE_IP} ${STORAGE_MAC} ${GW} ${VIP} ${DNS}' < "$repo/talos/patches/network.tmpl.yaml" > "$tmpdir/net.yaml"
     talosctl machineconfig patch "$tmpdir/controlplane.yaml" --patch @"$tmpdir/net.yaml" -o "$tmpdir/final.yaml"
     talosctl validate -c "$tmpdir/final.yaml" -m cloud
     talosctl apply-config -n "$NODE_IP" -e "$NODE_IP" -f "$tmpdir/final.yaml" {{flags}}
