@@ -95,7 +95,13 @@ pr:
     gh pr create --title "$(git log -1 --pretty=%s)" --body ""
 
 done:
+    #!/usr/bin/env bash
+    set -euo pipefail
     git switch main && git pull && git fetch --prune
+    for b in $(git branch --format='%(refname:short)' | grep -v '^main$'); do
+        state=$(gh pr view "$b" --json state -q .state 2>/dev/null || echo NONE)
+        if [ "$state" = "MERGED" ]; then git branch -D "$b" && echo "sprzatnieto: $b"; fi
+    done
 
 # --- Cilium
 cilium_ver := "1.19.4"
