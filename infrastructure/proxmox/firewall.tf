@@ -1,3 +1,9 @@
+# UWAGA: 'management' to WBUDOWANY, ZNACZACY ipset PVE - czlonkowie sa
+# automatycznie wpuszczani na porty zarzadzania hostow (GUI 8006, SSH 22,
+# VNC 5900-5999, SPICE 3128) przez reguly generowane przez pve-firewall.
+# Siec klastra dokladana automatycznie. Dlatego NIE ma osobnej grupy dla
+# mgmt - ten ipset JEST mechanizmem, nazwa jest znaczaca, nie dekoracyjna.
+
 locals {
   fw_mgmt_sources = [
     local.net.vlans.oob_mgmt.cidr,   # bastion/hosty
@@ -19,28 +25,7 @@ resource "proxmox_virtual_environment_firewall_ipset" "management" {
   }
 }
 
-resource "proxmox_virtual_environment_cluster_firewall_security_group" "pve_mgmt" {
-  name    = "pve-mgmt"
-  comment = "dostep do hostow PVE"
-  rule {
-    type = "in"
-    action = "ACCEPT"
-    source = "+management"
-    dport = "8006"
-    proto = "tcp"
-    comment = "GUI"
-  }
-  rule {
-    type = "in"
-    action = "ACCEPT"
-    source = "+management"
-    dport = "22"
-    proto = "tcp"
-    comment = "SSH"
-  }
-}
-
-resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_srv" {
+  resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_srv" {
   name    = "storage-srv"
   comment = "uslugi storage nas na VLAN 50 (iSCSI + NFS)"
   rule {
@@ -58,5 +43,22 @@ resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_
     dport = "2049"
     proto = "tcp"
     comment = "NFS v4 (PVE shared + shares)"
+  }
+  rule {
+    type    = "in"
+    action  = "ACCEPT"
+    source  = local.fw_storage_cidr
+    dport   = "22"
+    proto   = "tcp"
+    comment = "SSH - kanal sterowania democratic-csi"
+  }
+}
+
+# Grupa podpieta dla nas - dla uslugi storage
+resource "proxmox_virtual_environment_firewall_rules" "nas_storage" {
+  node_name = "nas"
+  rule {
+    security_group = proxmox_virtual_environment_cluster_firewall_security_group.storage_srv.name
+    comment        = "uslugi storage nas (VLAN 50)"
   }
 }
