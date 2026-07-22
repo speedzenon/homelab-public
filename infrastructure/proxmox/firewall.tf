@@ -6,8 +6,8 @@
 
 locals {
   fw_mgmt_sources = [
-    local.net.vlans.oob_mgmt.cidr,   # bastion/hosty
-    local.net.vlans.zenon.cidr,      # Twoja stacja
+    local.net.vlans.oob_mgmt.cidr, # bastion/hosty
+    local.net.vlans.zenon.cidr,    # Twoja stacja
   ]
   fw_storage_cidr = local.net.vlans.storage.cidr
 }
@@ -25,23 +25,23 @@ resource "proxmox_virtual_environment_firewall_ipset" "management" {
   }
 }
 
-  resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_srv" {
+resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_srv" {
   name    = "storage-srv"
   comment = "uslugi storage nas na VLAN 50 (iSCSI + NFS)"
   rule {
-    type = "in"
-    action = "ACCEPT"
-    source = local.fw_storage_cidr
-    dport = "3260"
-    proto = "tcp"
+    type    = "in"
+    action  = "ACCEPT"
+    source  = local.fw_storage_cidr
+    dport   = "3260"
+    proto   = "tcp"
     comment = "iSCSI (democratic-csi)"
   }
   rule {
-    type = "in"
-    action = "ACCEPT"
-    source = local.fw_storage_cidr
-    dport = "2049"
-    proto = "tcp"
+    type    = "in"
+    action  = "ACCEPT"
+    source  = local.fw_storage_cidr
+    dport   = "2049"
+    proto   = "tcp"
     comment = "NFS v4 (PVE shared + shares)"
   }
   rule {
@@ -52,7 +52,7 @@ resource "proxmox_virtual_environment_firewall_ipset" "management" {
     proto   = "tcp"
     comment = "SSH - kanal sterowania democratic-csi"
   }
-    rule {
+  rule {
     type    = "in"
     action  = "ACCEPT"
     source  = local.fw_storage_cidr
