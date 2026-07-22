@@ -52,6 +52,13 @@ resource "proxmox_virtual_environment_firewall_ipset" "management" {
     proto   = "tcp"
     comment = "SSH - kanal sterowania democratic-csi"
   }
+    rule {
+    type    = "in"
+    action  = "ACCEPT"
+    source  = local.fw_storage_cidr
+    proto   = "icmp"
+    comment = "ICMP - diagnostyka w segmencie storage"
+  }
 }
 
 # Grupa podpieta dla nas - dla uslugi storage
