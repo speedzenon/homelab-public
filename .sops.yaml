@@ -15,6 +15,13 @@ creation_rules:
     age: >-
       age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2
 
+  # CSI driver configs — full encrypt (zawieraja klucz SSH w privateKey, ktory
+  # NIE pasuje do encrypted_regex ponizej; caly plik szyfrowany dla bezpieczenstwa).
+  # MUSI byc PRZED ogolna regula kubernetes/ - SOPS bierze pierwszy pasujacy wzorzec.
+  - path_regex: 'kubernetes/platform/democratic-csi.*/config\.sops\.ya?ml$'
+    age: >-
+      age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2
+
   # Kubernetes secrets — encrypt only data/stringData fields
   - path_regex: 'kubernetes/.*\.sops\.ya?ml$'
     encrypted_regex: '^(data|stringData|password|token|key|secret|credentials)$'
