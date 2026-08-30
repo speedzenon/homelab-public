@@ -1,0 +1,15 @@
+# snapshot-controller 0.3.0 (appVersion 8.2.1)
+# Defaulty chartu sa rozsadne: controller.replicaCount=3 z --leader-election=true
+# (tylko jedna instancja aktywna, reszta w gotowosci - HA bez konfliktu).
+# validatingWebhook celowo WYLACZONY (domyslnie): webhook walidacyjny snapshotow
+# wymaga wlasnego TLS/cert-managera i chroni glownie przed recznie tworzonymi,
+# nieprawidlowymi VolumeSnapshotContent. Przy sterowniku tworzacym te obiekty
+# automatycznie ryzyko jest znikome - dokladamy dopiero, gdy bedzie realna potrzeba.
+controller:
+  enabled: true
+  replicaCount: 3
+  rbac:
+    enabled: true
+
+validatingWebhook:
+  enabled: false
