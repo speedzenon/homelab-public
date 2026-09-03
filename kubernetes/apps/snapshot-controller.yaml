@@ -1,0 +1,39 @@
+# Snapshot-controller: instaluje CRD snapshot.storage.k8s.io (VolumeSnapshot,
+# VolumeSnapshotContent, VolumeSnapshotClass) + kontroler obserwujacy te obiekty.
+# MUSI wejsc PRZED democratic-csi: sidecar csi-snapshotter w sterowniku obserwuje
+# VolumeSnapshotContent i bez zarejestrowanego CRD wpada w crashloop na starcie.
+#
+# To JEDYNE miejsce w klastrze instalujace snapshot CRD - sa cluster-scoped, wiec
+# drugi chart probujacy je zainstalowac dalby konflikt wlascicielstwa (wieczny
+# OutOfSync). Kazdy przyszly sterownik CSI korzysta z TYCH CRD, nie instaluje wlasnych.
+#
+# automated wlaczone od razu: zwykly deployment (3 repliki, leader-election),
+# zero uprawnien privileged, brak ryzyka adopcyjnego - inaczej niz cilium/argocd.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: snapshot-controller
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://democratic-csi.github.io/charts/
+      chart: snapshot-controller
+      targetRevision: 0.3.0
+      helm:
+        releaseName: snapshot-controller
+        valueFiles:
+          - $values/kubernetes/platform/snapshot-controller/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

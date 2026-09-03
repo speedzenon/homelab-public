@@ -1,0 +1,58 @@
+# democratic-csi 0.15.1 - JAWNE values (bez sekretow).
+# Pelna konfiguracja sterownika z kluczem SSH jest w Secrecie (existingConfigSecret),
+# tworzonym z config.sops.yaml w tym katalogu. Tutaj tylko to, co moze byc publiczne.
+
+driver:
+  # Secret z pelnym configiem sterownika (klucz w Secrecie: driver-config-file.yaml).
+  # Tworzony imperatywnie z bastionu - patrz README w tym katalogu.
+  existingConfigSecret: democratic-csi-iscsi-config
+
+  # UWAGA: mimo existingConfigSecret chart WYMAGA jawnego driver.config.driver -
+  # uzywa go do logiki warunkowej (contains "iscsi" -> montowania iSCSI w node-podach).
+  # Musi byc identyczny jak 'driver:' w Secrecie. Same sekrety zostaja w Secrecie.
+  config:
+    driver: zfs-generic-iscsi
+
+# https://kubernetes-csi.github.io/docs/csi-driver-object.html
+csiDriver:
+  name: "org.democratic-csi.iscsi"
+
+# --- NODE (DaemonSet - initiator iSCSI na kazdym wezle) ---
+node:
+  driver:
+    # P1: Talos ma read-only rootfs; initiator (initiatorname.iscsi, baza sesji)
+    # domyslnie laduje do /etc/iscsi -> blad zapisu przy pierwszym logowaniu do targetu.
+    # /var jest jedyna zapisywalna sciezka; iscsi-tools jako extension w schematicu Talosa.
+    iscsiDirHostPath: /var/iscsi
+    iscsiDirHostPathType: DirectoryOrCreate
+
+# --- STORAGE CLASS ---
+# Definiowana deklaratywnie tutaj (nie recznie), zeby stan wynikal z repo.
+# volumeBindingMode WaitForFirstConsumer: PV powstaje dopiero gdy pod jest
+# przypisany do wezla - przy iSCSI mniej istotne niz przy topologii lokalnej,
+# ale spojne i bezpieczne (unika provisioningu wolumenow, ktore nie zostana uzyte).
+# allowVolumeExpansion: sterownik wspiera ControllerExpandVolume.
+storageClasses:
+  - name: iscsi-zfs
+    defaultClass: false
+    reclaimPolicy: Delete
+    volumeBindingMode: WaitForFirstConsumer
+    allowVolumeExpansion: true
+    parameters:
+      fsType: ext4
+
+# --- VOLUME SNAPSHOT CLASSES ---
+# Dwie klasy - wybor mechanizmu per uzycie:
+#  - iscsi-zfs-snap:          natywny snapshot ZFS (darmowy, natychmiastowy, ale
+#                             snapshot jest dzieckiem wolumenu - blokuje jego usuniecie)
+#  - iscsi-zfs-snap-detached: zfs send/recv do datasetu 's' - pelna niezalezna kopia
+#                             (kosztuje czas i miejsce, cykl zycia w pelni niezalezny)
+volumeSnapshotClasses:
+  - name: iscsi-zfs-snap
+    deletionPolicy: Delete
+    parameters:
+      detachedSnapshots: "false"
+  - name: iscsi-zfs-snap-detached
+    deletionPolicy: Delete
+    parameters:
+      detachedSnapshots: "true"

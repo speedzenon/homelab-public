@@ -1,0 +1,69 @@
+# SZABLON configu sterownika zfs-generic-iscsi (democratic-csi 0.15.1).
+# To jest przyklad struktury do review. PRAWDZIWY plik z kluczem SSH powstaje
+# na bastionie jako config.sops.yaml (zaszyfrowany age) i NIGDY nie trafia jawny
+# do repo. Procedura tworzenia Secretu - patrz README.md w tym katalogu.
+#
+# allowlist-ip: ten plik jest szablonem konfiguracji, adresy sa czescia kontraktu
+
+driver: zfs-generic-iscsi
+
+sshConnection:
+  host: 10.0.50.12          # allowlist-ip - nas, noga storage VLAN 50
+  port: 22
+  username: csi
+  # Klucz prywatny ed25519 usera csi (~/csi_ed25519 z bastionu).
+  # W config.sops.yaml wklej TU cala zawartosc pliku klucza - razem z jego
+  # naglowkiem i stopka - z wcieciem 4 spacji pod 'privateKey: |'.
+  # Czesc publiczna jest w /home/csi/.ssh/authorized_keys na nas.
+  # UWAGA: w tym SZABLONIE celowo nie ma naglowka klucza - hooki detect-private-key
+  # i gitleaks rozpoznaja go po sygnaturze i zablokowalyby commit samego szablonu.
+  privateKey: |
+    PLACEHOLDER - wkleic zawartosc ~/csi_ed25519 w config.sops.yaml
+
+zfs:
+  cli:
+    # User csi nie jest rootem - sterownik wola 'sudo zfs ...'.
+    # Sudoers na nas: NOPASSWD na /usr/sbin/zfs (i /usr/bin/targetcli).
+    # Sciezek NIE nadpisujemy - Debianowe defaulty sterownika trafiaja poprawnie
+    # (inaczej niz TrueNAS, gdzie zfs jest w /usr/local/sbin).
+    sudoEnabled: true
+
+  # Para v/s: RODZENSTWO, zaden nie zawiera sie w drugim (wymog sterownika -
+  # operacje rekurencyjne 'zfs destroy -r' na drzewie wolumenow nie moga siegac snapshotow).
+  datasetParentName: fast/k8s/iscsi/v
+  detachedSnapshotsDatasetParentName: fast/k8s/iscsi/s
+
+  # 16K: standardowy punkt rownowagi dla zvoli pod ext4/xfs (blok 4K).
+  # Mniej -> narzut metadanych i gorsza kompresja; wiecej -> write amplification.
+  # Na mirrorze (nie RAIDZ) brak problemu z paddingiem parzystosci przy malym bloku.
+  zvolBlocksize: 16K
+  # thin provisioning - alokacja dopiero przy zapisie (patrz emulate_tpu nizej)
+  zvolEnableReservation: false
+  zvolCompression: ""       # inherit z puli (lz4)
+  zvolDedup: ""
+
+iscsi:
+  shareStrategy: "targetCli"
+  shareStrategyTargetCli:
+    # KRYTYCZNE: w przykladzie upstream ZAKOMENTOWANE. User csi nie jest rootem,
+    # wiec bez tego sterownik wola 'targetcli' bez sudo -> odmowa uprawnien.
+    sudoEnabled: true
+    # IQN: iqn.RRRR-MM.odwrocona-domena:etykieta. Data = miesiac posiadania domeny,
+    # nie "dzis". Wpisany na stale w kazdy target - zmiana po fakcie = migracja wolumenow.
+    basename: "iqn.2026-07.pl.speedzenon.lab:nas"
+    tpg:
+      attributes:
+        authentication: 0        # CHAP wylaczony - izolacja jest sieciowa (VLAN 50 + firewall)
+        generate_node_acls: 1    # tryb demo: kazdy initiator z VLAN 50 moze sie podlaczyc
+        cache_dynamic_acls: 1
+        demo_mode_write_protect: 0
+    block:
+      attributes:
+        # 1 (upstream ma 0): oglasza obsluge UNMAP/discard. Bez tego thin-zvol
+        # rosnie monotonicznie do rozmiaru nominalnego mimo kasowania plikow w podzie
+        # (warstwa blokowa nie wie o zwolnieniach). Wlacza fstrim/discard -> realne
+        # odzyskiwanie miejsca. Kluczowe takze dla przyszlego KubeVirt (discard=unmap).
+        emulate_tpu: 1
+
+  targetPortal: "10.0.50.12:3260"    # allowlist-ip - adres OGLASZANY initiatorom
+  interface: ""

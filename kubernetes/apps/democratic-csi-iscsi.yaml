@@ -1,0 +1,55 @@
+# democratic-csi (driver zfs-generic-iscsi): dynamiczny provisioning zvoli ZFS
+# na hoscie 'nas' wystawianych po iSCSI. Sterownik tlumaczy wywolania CSI (gRPC)
+# na komendy 'zfs' i 'targetcli' wykonywane po SSH jako user csi (waskie sudo).
+#
+# WYMAGA snapshot-controller.yaml PRZED soba (CRD snapshot.storage.k8s.io).
+#
+# Sekret: config sterownika zawiera klucz prywatny SSH -> NIE MOZE trafic do
+# publicznych values. Uzywamy existingConfigSecret; Secret tworzony imperatywnie
+# z bastionu (sops -d config.sops.yaml | kubectl create secret ...). Klucz w
+# Secrecie MUSI nazywac sie 'driver-config-file.yaml' (sterownik montuje go pod
+# /config i czyta ta konkretna nazwe - patrz --driver-config-file w chartcie).
+# Ten sekret celowo zostaje POZA External Secrets Operator na stale: ESO->OpenBao,
+# a OpenBao potrzebuje trwalego storage, ktory dostarcza wlasnie ten sterownik.
+# Pobieranie klucza CSI z OpenBao daloby petle bootstrapu nie do rozwiazania.
+#
+# P2: node-pody sa privileged (dostep do /dev, iscsiadm, montowania z propagacja
+# Bidirectional). Talos wymusza Pod Security Admission >= baseline, wiec namespace
+# MUSI miec etykiete enforce=privileged - inaczej apiserver odrzuci pody po cichu
+# (DaemonSet istnieje, zero podow, brak bledu). managedNamespaceMetadata ustawia
+# to deklaratywnie, zamiast imperatywnego kubectl label.
+#
+# Sync POCZATKOWO reczny (brak automated): najpierw App Diff, potem reczny Sync -
+# ta sama szkola adopcji co cilium/argocd. automated wlaczymy osobnym PR po
+# potwierdzeniu, ze pierwszy PVC dziala E2E (Faza 8).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: democratic-csi-iscsi
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://democratic-csi.github.io/charts/
+      chart: democratic-csi
+      targetRevision: 0.15.1
+      helm:
+        releaseName: democratic-csi-iscsi
+        valueFiles:
+          - $values/kubernetes/platform/democratic-csi-iscsi/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: democratic-csi
+  syncPolicy:
+    # automated CELOWO wylaczone na czas adopcji - wlaczamy osobnym PR (Faza 8)
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/audit: privileged
