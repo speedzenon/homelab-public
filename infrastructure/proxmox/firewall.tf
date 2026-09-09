@@ -28,6 +28,13 @@ resource "proxmox_virtual_environment_firewall_ipset" "management" {
 resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_srv" {
   name    = "storage-srv"
   comment = "uslugi storage nas na VLAN 50 (iSCSI + NFS)"
+  # UWAGA co do portu 111: serwer NFS jest v4-only (vers3=n), ale PVE sprawdza
+  # dostepnosc storage NFS poleceniem 'showmount -e', ktore nalezy do protokolu
+  # mount z rodziny v3 i chodzi przez rpcbind na 111. Przy polityce DROP pakiet
+  # ginie bez odpowiedzi -> showmount czeka do timeoutu (~10s na storage).
+  # Objaw: kreator VM w GUI wisi ~20s i wywala sie na NS_BINDING_ABORTED, bo
+  # ExtJS anuluje zadanie zanim wroci. Samo montowanie v4 dziala bez 111 -
+  # zepsute bylo tylko SPRAWDZANIE dostepnosci.
   rule {
     type    = "in"
     action  = "ACCEPT"
@@ -51,6 +58,22 @@ resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_
     dport   = "22"
     proto   = "tcp"
     comment = "SSH - kanal sterowania democratic-csi"
+  }
+  rule {
+    type    = "in"
+    action  = "ACCEPT"
+    source  = local.fw_storage_cidr
+    dport   = "111"
+    proto   = "tcp"
+    comment = "rpcbind - showmount przy sprawdzaniu storage NFS przez PVE"
+  }
+  rule {
+    type    = "in"
+    action  = "ACCEPT"
+    source  = local.fw_storage_cidr
+    dport   = "111"
+    proto   = "udp"
+    comment = "rpcbind UDP - jw, showmount probuje obu protokolow"
   }
   rule {
     type    = "in"
