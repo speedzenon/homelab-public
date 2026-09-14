@@ -44,7 +44,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: democratic-csi
   syncPolicy:
-    # automated CELOWO wylaczone na czas adopcji - wlaczamy osobnym PR (Faza 8)
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - ServerSideApply=true
       - CreateNamespace=true
