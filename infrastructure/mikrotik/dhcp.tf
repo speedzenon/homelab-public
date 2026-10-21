@@ -38,5 +38,5 @@ resource "routeros_ip_dhcp_server_lease" "this" {
   address     = each.value.ip
   mac_address = each.value.mac
   server      = routeros_ip_dhcp_server.this[each.value.vlan].name
-  comment     = "${each.key} (rezerwacja)"
+  comment     = each.key
 }
