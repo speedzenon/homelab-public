@@ -32,16 +32,14 @@ Secret pod /config i czyta plik o tej nazwie (flaga --driver-config-file w chart
 Zla nazwa = udany montaz, ale sterownik nie znajdzie pliku i wpadnie w crashloop.
 
 ```bash
-kubectl create namespace democratic-csi \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-sops -d kubernetes/platform/democratic-csi-iscsi/config.sops.yaml | \
-  kubectl create secret generic democratic-csi-iscsi-config \
-    --namespace democratic-csi \
-    --from-file=driver-config-file.yaml=/dev/stdin
+just csi-secret
 ```
 
-Rotacja klucza: usun Secret i odtworz go powyzsza komenda z nowym configiem,
+Recepta tworzy namespace i Secret z `config.sops.yaml` (`sops -d | kubectl create
+secret --dry-run | kubectl apply`), wiec jest idempotentna - pasuje i do Day-1,
+i do odbudowy klastra.
+
+Rotacja klucza: zaktualizuj `config.sops.yaml`, uruchom ponownie `just csi-secret`,
 potem `kubectl rollout restart` na controllerze i node DaemonSecie.
 
 ## Kolejnosc wdrozenia (Faza 7)

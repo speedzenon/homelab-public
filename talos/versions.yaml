@@ -1,0 +1,11 @@
+# Jedno zrodlo wersji Talosa i Kubernetesa. Czytaja je:
+#  - infrastructure/proxmox/talos.tf - obraz boot z Image Factory (VM-ki),
+#  - justfile (talos-apply)          - installer image + wersja k8s w machine config.
+# Schematic = qemu-guest-agent + iscsi-tools + util-linux-tools (publiczny id, nie sekret).
+#
+# Celowo NIE sledzone przez Renovate: upgrade Talosa to 'talosctl upgrade' wezel
+# po wezle, nie podbicie liczby. Przed zmiana 'version' zrob 'just tofu-plan' i
+# sprawdz, czy zmiana obrazu boot nie wymusza odtworzenia VM-ek.
+version: "1.12.6"
+schematic: "53513e54bb39202f35694412577a6bc53d484744d35a126e5d42ef34785c0d83"
+kubernetes: "1.35.2"

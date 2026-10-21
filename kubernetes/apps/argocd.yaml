@@ -1,9 +1,8 @@
 # ArgoCD zarzadza samym soba (multi-source, ten sam wzorzec co cilium.yaml):
-# - zrodlo 1: chart argo/argo-cd (ta sama wersja co instalacja helm CLI)
+# - zrodlo 1: chart argo/argo-cd; targetRevision = JEDYNE zrodlo wersji
+#   (just argocd-install czyta ja stad, Renovate podbija tutaj)
 # - zrodlo 2: to repo jako 'ref' -> values z kubernetes/bootstrap/argocd/
-# automated CELOWO wylaczone: self-management to najryzykowniejsza adopcja
-# (kontroler aktualizuje sam siebie) - najpierw App Diff + reczny Sync,
-# automated wlaczamy osobnym PR po potwierdzeniu, ze diff = sama metadana.
+# automated wlaczone w #21, po adopcji z recznym App Diff + Sync.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

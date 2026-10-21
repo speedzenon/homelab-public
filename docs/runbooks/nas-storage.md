@@ -125,8 +125,10 @@ Media i Immich mają `root_squash`: dostęp idzie przez konkretny UID, więc
 skompromitowany pod z prawami roota nie przejmie biblioteki.
 
 `rpcbind` nasłuchuje na 111 mimo v4-only — to `nfs-common`, które PVE ciągnie
-jako *klient* NFS. Świadomie zostawione: firewall nie otwiera 111, a wyłączanie
-rpcbind na siłę gryzie się z zależnościami pakietowymi PVE.
+jako *klient* NFS. Wyłączanie rpcbind na siłę gryzie się z zależnościami
+pakietowymi PVE. Firewall **otwiera** 111 (TCP+UDP) z VLAN storage: PVE sprawdza
+dostępność storage NFS przez `showmount`, który idzie przez rpcbind — przy DROP
+kreator VM wisiał na timeoucie (szczegóły w komentarzu `infrastructure/proxmox/firewall.tf`).
 
 ## 5. Użytkownik csi
 

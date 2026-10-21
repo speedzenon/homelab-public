@@ -38,7 +38,7 @@ resource "proxmox_virtual_environment_vm" "this" {
     for_each = var.extra_disks
     content {
       datastore_id = disk.value.datastore_id
-      interface    = disk.value.interface   # np. scsi1, scsi2
+      interface    = disk.value.interface # np. scsi1, scsi2
       iothread     = true
       discard      = "on"
       size         = disk.value.size
@@ -55,9 +55,13 @@ resource "proxmox_virtual_environment_vm" "this" {
     }
   }
 
+  # MAC eth0 przypiety (gdy podany): Talos wybiera interfejs po hardwareAddr,
+  # wiec losowy MAC po odtworzeniu VM zerwalby konfiguracje sieci wezla.
+  # upper(): PVE generuje MAC wielkimi literami - ten sam zapis = brak diffu.
   network_device {
-    bridge  = "vmbr0"
-    vlan_id = var.vlan_id
+    bridge      = "vmbr0"
+    vlan_id     = var.vlan_id
+    mac_address = var.mac_address == null ? null : upper(var.mac_address)
   }
 
   dynamic "network_device" {

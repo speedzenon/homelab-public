@@ -1,8 +1,9 @@
 # Adopcja Cilium pod ArgoCD (multi-source):
-# - zrodlo 1: chart z helm.cilium.io (ta sama wersja co instalacja helm CLI)
+# - zrodlo 1: chart z helm.cilium.io; targetRevision = JEDYNE zrodlo wersji
+#   (just cilium-install czyta ja stad, Renovate podbija tutaj)
 # - zrodlo 2: to repo jako 'ref' -> values z kubernetes/bootstrap/cilium/
-# Sync POCZATKOWO reczny: najpierw App Diff, potem Sync (adopcja pod kontrola);
-# automated wlaczamy osobnym PR po udanej adopcji.
+# automated wlaczone po udanej adopcji (reczny App Diff + Sync na starcie).
+# UWAGA: podbicie wersji CNI = roll agentow na wszystkich wezlach - review PR.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

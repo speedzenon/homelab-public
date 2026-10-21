@@ -30,7 +30,7 @@ resource "routeros_ip_dhcp_server_network" "this" {
   for_each   = local.dhcp_vlans
   address    = each.value.cidr
   gateway    = each.value.gateway
-  dns_server = [each.value.gateway]   # MikroTik jako resolver (zgodnie z network.sops.yaml)
+  dns_server = [each.value.gateway] # MikroTik jako resolver (zgodnie z network.sops.yaml)
 }
 
 resource "routeros_ip_dhcp_server_lease" "this" {

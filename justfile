@@ -2,19 +2,19 @@
 # Homelab command runner. Lista: `just`
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-net      := "infrastructure/network.sops.yaml"
-tsecrets := "talos/secrets/lab-secrets.sops.yaml"
-k8sver   := "1.35.2"
+net       := "infrastructure/network.sops.yaml"
+tsecrets  := "talos/secrets/lab-secrets.sops.yaml"
+tversions := "talos/versions.yaml"
 
 default:
     @just --list
 
-# --- OpenTofu / Proxmox ---
-tofu-plan:
-    cd infrastructure/proxmox && sops exec-env secrets.sops.yaml 'tofu plan'
+# --- OpenTofu (dir: proxmox | mikrotik) ---
+tofu-plan dir="proxmox":
+    cd infrastructure/{{dir}} && sops exec-env secrets.sops.yaml 'tofu plan'
 
-tofu-apply:
-    cd infrastructure/proxmox && sops exec-env secrets.sops.yaml 'tofu apply'
+tofu-apply dir="proxmox":
+    cd infrastructure/{{dir}} && sops exec-env secrets.sops.yaml 'tofu apply'
 
 # --- Talos: sekrety klastra (JEDNORAZOWO; zaszyfrowane SOPS, nigdy plaintext w repo) ---
 talos-gen-secrets:
@@ -33,6 +33,11 @@ talos-apply node *flags:
     repo="$PWD"
     test -f "$repo/talos/patches/cluster.yaml" || { echo "BLAD: brak talos/patches/*.yaml"; exit 1; }
     tmpdir=$(mktemp -d); trap 'rm -rf "$tmpdir"' EXIT
+    # Wersje z jednego zrodla (to samo czyta tofu): talos/versions.yaml
+    TALOS_VERSION=$(awk -F'"' '/^version:/{print $2}' {{tversions}})
+    TALOS_SCHEMATIC=$(awk -F'"' '/^schematic:/{print $2}' {{tversions}})
+    K8S_VERSION=$(awk -F'"' '/^kubernetes:/{print $2}' {{tversions}})
+    INSTALL_IMAGE="factory.talos.dev/installer/${TALOS_SCHEMATIC}:v${TALOS_VERSION}"
     NODE_IP=$(sops -d --extract '["k8s_clusters"]["lab"]["nodes"]["{{node}}"]["ip"]' {{net}})
     VIP=$(sops -d --extract '["k8s_clusters"]["lab"]["vip"]' {{net}})
     MAC=$(sops -d --extract '["k8s_clusters"]["lab"]["nodes"]["{{node}}"]["mac"]' {{net}})
@@ -42,7 +47,8 @@ talos-apply node *flags:
     DNS="$GW"; export NODE_IP MAC STORAGE_IP STORAGE_MAC VIP GW DNS
     sops exec-file --no-fifo {{tsecrets}} "talosctl gen config lab https://${VIP}:6443 \
         --with-secrets {} \
-        --kubernetes-version {{k8sver}} \
+        --kubernetes-version ${K8S_VERSION} \
+        --install-image ${INSTALL_IMAGE} \
         --config-patch @$repo/talos/patches/cluster.yaml \
         --config-patch @$repo/talos/patches/machine-base.yaml \
         --output-types controlplane \
@@ -103,26 +109,35 @@ done:
         if [ "$state" = "MERGED" ]; then git branch -D "$b" && echo "sprzatnieto: $b"; fi
     done
 
-# --- Cilium
-cilium_ver := "1.19.4"
-# break-glass: tylko gdy ArgoCD lezy; normalnie zarzadza Argo
+# --- Bootstrap klastra (Day-1, kolejnosc): cilium-install -> argocd-install -> csi-secret
+# Wersje chartow czytane z Application-ow w kubernetes/apps/ (jedno zrodlo,
+# podbijane przez Renovate) - instalacja helm CLI = dokladnie to, co potem adoptuje Argo.
+
+# Day-1 (bez CNI pody ArgoCD nie wstana) oraz break-glass, gdy ArgoCD lezy
 cilium-install:
     helm repo add cilium https://helm.cilium.io/ --force-update
     helm upgrade --install cilium cilium/cilium \
-        --version {{cilium_ver}} \
+        --version "$(awk '/targetRevision:/{print $2; exit}' kubernetes/apps/cilium.yaml)" \
         --namespace kube-system \
         --values kubernetes/bootstrap/cilium/values.yaml
-
-# --- ArgoCD
-argocd_ver := "9.5.20"
 
 argocd-install:
     helm repo add argo https://argoproj.github.io/argo-helm --force-update
     helm upgrade --install argocd argo/argo-cd \
-        --version {{argocd_ver}} \
+        --version "$(awk '/targetRevision:/{print $2; exit}' kubernetes/apps/argocd.yaml)" \
         --namespace argocd --create-namespace \
         --values kubernetes/bootstrap/argocd/values.yaml
     kubectl apply -f kubernetes/bootstrap/argocd/root-app.yaml
+
+# Idempotentne: ponowne uruchomienie = aktualizacja (rotacja klucza); poza GitOps, patrz README sterownika.
+# Secret z configiem democratic-csi (klucz SSH) - Day-1, PRZED syncem sterownika
+csi-secret:
+    kubectl create namespace democratic-csi --dry-run=client -o yaml | kubectl apply -f -
+    sops -d kubernetes/platform/democratic-csi-iscsi/config.sops.yaml | \
+        kubectl create secret generic democratic-csi-iscsi-config \
+            --namespace democratic-csi \
+            --from-file=driver-config-file.yaml=/dev/stdin \
+            --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f -
 
 argocd-password:
     @kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo

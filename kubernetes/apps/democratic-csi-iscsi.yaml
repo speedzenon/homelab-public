@@ -6,7 +6,7 @@
 #
 # Sekret: config sterownika zawiera klucz prywatny SSH -> NIE MOZE trafic do
 # publicznych values. Uzywamy existingConfigSecret; Secret tworzony imperatywnie
-# z bastionu (sops -d config.sops.yaml | kubectl create secret ...). Klucz w
+# z bastionu przez 'just csi-secret' (sops -d config.sops.yaml | kubectl). Klucz w
 # Secrecie MUSI nazywac sie 'driver-config-file.yaml' (sterownik montuje go pod
 # /config i czyta ta konkretna nazwe - patrz --driver-config-file w chartcie).
 # Ten sekret celowo zostaje POZA External Secrets Operator na stale: ESO->OpenBao,
@@ -19,9 +19,8 @@
 # (DaemonSet istnieje, zero podow, brak bledu). managedNamespaceMetadata ustawia
 # to deklaratywnie, zamiast imperatywnego kubectl label.
 #
-# Sync POCZATKOWO reczny (brak automated): najpierw App Diff, potem reczny Sync -
-# ta sama szkola adopcji co cilium/argocd. automated wlaczymy osobnym PR po
-# potwierdzeniu, ze pierwszy PVC dziala E2E (Faza 8).
+# automated wlaczone po testach E2E (Faza 8, docs/runbooks/nas-storage.md);
+# pierwszy Sync byl reczny (App Diff -> Sync), ta sama szkola adopcji co cilium/argocd.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

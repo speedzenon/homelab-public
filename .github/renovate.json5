@@ -20,6 +20,19 @@
   dependencyDashboard: true,
   dependencyDashboardTitle: 'Renovate Dependency Dashboard',
 
+  // Wersje chartów w Application-ach ArgoCD (Cilium, ArgoCD, democratic-csi,
+  // snapshot-controller). Manager argocd NIE ma domyślnych wzorców plików —
+  // bez tego Renovate nigdy nie podbijał rdzenia stacku. justfile czyta wersje
+  // z tych plików, więc jeden bump aktualizuje też instalację helm CLI.
+  argocd: {
+    managerFilePatterns: ['/^kubernetes/apps/.+\\.ya?ml$/'],
+  },
+
+  // Hooki pre-commit (gitleaks, yamllint, ...) — manager domyślnie wyłączony.
+  'pre-commit': {
+    enabled: true,
+  },
+
   packageRules: [
     {
       description: 'Grupuj aktualizacje minor i patch w jeden PR',
