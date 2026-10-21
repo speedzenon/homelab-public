@@ -74,4 +74,12 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   operating_system { type = "l26" }
+
+  lifecycle {
+    # Obraz boot liczy sie tylko przy TWORZENIU VM; file_id jest ForceNew w bpg,
+    # wiec nowa wersja Talosa w talos/versions.yaml odtworzylaby wszystkie
+    # wezly (utrata etcd). Upgrade idzie in-place: 'just talos-upgrade'.
+    # Swiadoma przebudowa wezla: tofu apply -replace='module.talos_lab["<wezel>"]...'
+    ignore_changes = [disk[0].file_id]
+  }
 }

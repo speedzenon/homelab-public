@@ -38,13 +38,21 @@ jobs:
         run: |
           # renovate: datasource=github-releases depName=opentofu/opentofu
           TOFU_VERSION="1.13.1"
-          curl -fsSLo tofu.zip "https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.zip"
-          unzip -q tofu.zip tofu -d "$RUNNER_TEMP/tofu"
+          base="https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}"
+          zip="tofu_${TOFU_VERSION}_linux_amd64.zip"
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "${base}/${zip}"
+          curl -fsSLO "${base}/tofu_${TOFU_VERSION}_SHA256SUMS"
+          grep "  ${zip}\$" "tofu_${TOFU_VERSION}_SHA256SUMS" | sha256sum -c -
+          unzip -q "$zip" tofu -d "$RUNNER_TEMP/tofu"
           echo "$RUNNER_TEMP/tofu" >> "$GITHUB_PATH"
-          rm tofu.zip
 
       - name: Run pre-commit
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+        env:
+          # Na push do main checkout tworzy lokalna galaz 'main', a hook
+          # no-commit-to-branch (ochrona lokalnych commitow) wywalal kazdy run.
+          SKIP: no-commit-to-branch
 
   # ----------------------------------------------------------
   # Walidacja tytułu PR (Conventional Commits)

@@ -1,6 +1,8 @@
 # install.image NIE jest tu wpisany: 'just talos-apply' podaje go flaga
-# --install-image z talos/versions.yaml (ten sam schematic co obraz boot w tofu),
-# dzieki czemu upgrade'y (talosctl upgrade) zachowuja system extensions.
+# --install-image z talos/versions.yaml (ten sam schematic co obraz boot w tofu).
+# UWAGA: 'talosctl upgrade' NIE czyta install.image - bez --image bierze czysty
+# installer i gubi system extensions (iscsi-tools -> pada democratic-csi).
+# Upgrade tylko przez 'just talos-upgrade', ktory podaje obraz z Image Factory.
 machine:
   install:
     disk: /dev/sda

@@ -7,7 +7,8 @@
 # dotyczy nowych plikow i 'sops updatekeys'.
 #
 # DR: klucz ponizej to JEDYNY odbiorca. Dodaj drugi, offline (papier/YubiKey),
-# po przecinku, i przeszyfruj: for f in $(git ls-files '*.sops.*'); do sops updatekeys -y "$f"; done
+# po przecinku, i przeszyfruj:
+#   for f in $(git ls-files '*.sops.*' ':!:.sops.yaml'); do sops updatekeys -y "$f"; done
 creation_rules:
   - path_regex: '\.sops\.(ya?ml|json|env)$'
     age: >-

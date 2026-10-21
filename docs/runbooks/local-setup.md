@@ -4,7 +4,8 @@ Instrukcja konfiguracji lokalnego środowiska do pracy z repo.
 
 ## Wymagane narzędzia
 
-Zainstaluj: age, sops, gh, gpg, pre-commit, yamllint, shellcheck, gitleaks
+Zainstaluj: age, sops, gh, gpg, pre-commit, just, tofu (OpenTofu), talosctl, kubectl,
+helm, envsubst (gettext). Hook `tofu-fmt` w pre-commit wymaga `tofu` w PATH.
 
 ## Konfiguracja
 

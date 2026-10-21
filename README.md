@@ -57,9 +57,9 @@ flowchart LR
 - **Hypervisor:** Proxmox VE 9.2 — klaster 2 nodów + QDevice; firewall PVE zarządzany
   z OpenTofu; token API z dedykowaną rolą least-privilege
 - **Provisioning:** OpenTofu (bpg/proxmox, terraform-routeros) + Just jako command runner
-- **Kubernetes:** Talos Linux 1.12.6 / Kubernetes 1.35.2 — 3× control-plane z VIP,
-  obrazy z Image Factory (qemu-guest-agent, iscsi-tools)
-- **CNI:** Cilium 1.19.4 — kube-proxy replacement (eBPF), LB-IPAM + L2 announcements
+- **Kubernetes:** Talos Linux / Kubernetes (wersje: `talos/versions.yaml`) — 3× control-plane
+  z VIP, obrazy z Image Factory (qemu-guest-agent, iscsi-tools)
+- **CNI:** Cilium (wersja: `kubernetes/apps/cilium.yaml`) — kube-proxy replacement (eBPF), LB-IPAM + L2 announcements
   (usługi `LoadBalancer` bez port-forwardingu)
 - **GitOps:** ArgoCD (app-of-apps, zarządza również samym sobą) + Renovate
 - **Storage:** ZFS na nodzie storage; dedykowana sieć storage (drugi NIC węzłów,
