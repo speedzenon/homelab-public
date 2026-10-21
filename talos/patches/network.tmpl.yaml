@@ -3,11 +3,12 @@
 # Selekcja interfejsow po MAC (hardwareAddr), NIE po physical:true - wezly
 # maja dwa NIC-i, wiec physical:true matchowalby OBA i konfiguracja eth0
 # (adres k8s + VIP) nalozylaby sie takze na interfejs storage.
-#   ${MAC}         = istniejacy MAC eth0 (odczytany z net0 w Proxmoksie)
+#   ${MAC}         = MAC eth0 z SOPS (przypiety na net0 przez tofu, modules/vm)
 #   ${STORAGE_MAC} = deterministyczny MAC eth1 (net1, nadany w tofu z SOPS)
 # eth1: adres w nieroutowanym VLAN 50, BEZ 'routes' - jedyna default-route
 # zyje na eth0; interfejs storage to slepa uliczka do nas i tylko nas.
 # VIP (.20) wedruje miedzy CP po elekcji etcd - aktywny PO bootstrapie.
+# ${K8S_PREFIX}/${STORAGE_PREFIX} = prefiksy z cidr VLAN-ow (jak w tofu i MikroTiku).
 machine:
   network:
     interfaces:
@@ -15,7 +16,7 @@ machine:
           hardwareAddr: "${MAC}"
         dhcp: false
         addresses:
-          - ${NODE_IP}/24
+          - ${NODE_IP}/${K8S_PREFIX}
         routes:
           - network: 0.0.0.0/0
             gateway: ${GW}
@@ -25,7 +26,7 @@ machine:
           hardwareAddr: "${STORAGE_MAC}"
         dhcp: false
         addresses:
-          - ${STORAGE_IP}/24
+          - ${STORAGE_IP}/${STORAGE_PREFIX}
         mtu: 1500
     nameservers:
       - ${DNS}

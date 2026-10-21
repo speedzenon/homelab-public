@@ -1,5 +1,5 @@
 # Smoke-test autentykacji: read-only data source listujacy nody klastra.
-# Brak zasobow - `tofu plan` tylko czyta API i wypisuje output.
+# Zasoby zyja obok: talos.tf (obraz + VM-ki Talos), firewall.tf (firewall PVE).
 # Oczekiwany wynik: cluster_nodes = ["nas", "proxmox"] (kolejnosc dowolna).
 data "proxmox_virtual_environment_nodes" "this" {}
 

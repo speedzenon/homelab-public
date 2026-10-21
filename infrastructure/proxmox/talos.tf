@@ -15,7 +15,7 @@ locals {
 
   k8s_vlan   = local.net.vlans.k8s
   k8s_prefix = split("/", local.k8s_vlan.cidr)[1] # "24"
-  lab_nodes  = local.net.k8s_clusters.lab.nodes   # mapa: nazwa -> { vmid, ip, host, role }
+  lab_nodes  = local.net.k8s_clusters.lab.nodes   # mapa: nazwa -> { vmid, ip, mac, host, role, storage_* }
 }
 
 # --- Obraz Talos (Image Factory), pobierany na kazdy host z wezlami (dedup) ---
@@ -25,9 +25,9 @@ resource "proxmox_virtual_environment_download_file" "talos" {
   content_type            = "iso"
   datastore_id            = "local"
   node_name               = each.key
-  url                     = "https://factory.talos.dev/image/${var.talos_schematic_id}/v${var.talos_version}/nocloud-amd64.raw.zst"
+  url                     = "https://factory.talos.dev/image/${local.talos.schematic}/v${local.talos.version}/nocloud-amd64.raw.zst"
   decompression_algorithm = "zst"
-  file_name               = "talos-v${var.talos_version}-nocloud-amd64.img"
+  file_name               = "talos-v${local.talos.version}-nocloud-amd64.img"
   overwrite               = false
 }
 
@@ -48,6 +48,7 @@ module "talos_lab" {
   ip_cidr         = "${each.value.ip}/${local.k8s_prefix}"
   gateway         = local.k8s_vlan.gateway
   vlan_id         = local.k8s_vlan.id
+  mac_address     = each.value.mac
   storage_vlan_id = local.net.vlans.storage.id
   storage_mac     = each.value.storage_mac
 }

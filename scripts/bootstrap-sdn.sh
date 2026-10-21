@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Bootstrap SDN: nazwane sieci (VNet) w kreatorze VM zamiast pamietania tagow VLAN.
 #
-# DLACZEGO SKRYPT, A NIE OPENTOFU: provider bpg (0.112.0, stan 09.2026) nie ma
-# zasobow SDN. Do czasu az sie pojawia, to jest odtwarzalna specyfikacja w repo -
-# nie klikanie, ktorego nikt nie odtworzy. Gdy bpg doda wsparcie, ta tabela
-# przepisuje sie 1:1 na zasoby.
+# TODO: przeniesc do OpenTofu. Zalozenie "bpg nie ma zasobow SDN" jest nieaktualne -
+# przypiety bpg 0.111.x ma proxmox_sdn_zone_vlan, proxmox_sdn_vnet i
+# proxmox_sdn_applier (docs/resources/sdn_*.md providera). Tabela VNETS ponizej
+# przepisuje sie 1:1 na zasoby; po migracji skrypt do usuniecia.
 #
 # ZAKRES: dotyczy WYLACZNIE recznie stawianych VM testowych. Wezly Talos sa
 # zarzadzane przez OpenTofu (bridge=vmbr0,tag=30 w module VM) i NIE sa migrowane

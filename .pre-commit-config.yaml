@@ -99,6 +99,14 @@ repos:
         types: [text]
         exclude: '(\.sops\.ya?ml$|^scripts/check-no-plaintext-ips\.sh$)'
 
+      # Formatowanie OpenTofu - wczesniej poprawiane recznie (#40). Wymaga 'tofu'
+      # w PATH (lokalnie: narzedzia z README; w CI instaluje go ci.yml).
+      - id: tofu-fmt
+        name: OpenTofu fmt (check)
+        entry: tofu fmt -check -diff
+        language: system
+        files: '\.tf$'
+
   # ----------------------------------------------------------
   # Conventional Commits message validation
   # ----------------------------------------------------------

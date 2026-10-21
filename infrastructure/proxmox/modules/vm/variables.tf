@@ -55,14 +55,19 @@ variable "vlan_id" {
   type = number # tag VLAN (k8s = 30)
 }
 
+variable "mac_address" {
+  type    = string
+  default = null # MAC eth0 (z SOPS); null = PVE generuje losowy
+}
+
 variable "storage_vlan_id" {
   type    = number
-  default = null    # null = brak drugiego NIC-a (VM bez storage)
+  default = null # null = brak drugiego NIC-a (VM bez storage)
 }
 
 variable "storage_mac" {
   type    = string
-  default = null    # deterministyczny MAC eth1 (z SOPS); wymagany gdy storage_vlan_id != null
+  default = null # deterministyczny MAC eth1 (z SOPS); wymagany gdy storage_vlan_id != null
 }
 
 variable "on_boot" {

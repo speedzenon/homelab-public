@@ -1,0 +1,13 @@
+# Jedno zrodlo wersji Talosa i Kubernetesa. Czytaja je:
+#  - infrastructure/proxmox/talos.tf - obraz boot z Image Factory (tylko NOWE VM-ki),
+#  - justfile: talos-apply (installer + wersja k8s w machine config),
+#              talos-upgrade / talos-upgrade-k8s (upgrade istniejacych wezlow).
+# Schematic = qemu-guest-agent + iscsi-tools + util-linux-tools (publiczny id, nie sekret).
+#
+# Upgrade: podbij tu wersje -> 'just talos-upgrade <wezel>' wezel po wezle
+# (albo 'just talos-upgrade-k8s'). VM-ki ignoruja zmiane obrazu boot
+# (ignore_changes w modules/vm), wiec 'tofu apply' ich NIE odtwarza.
+# Celowo NIE sledzone przez Renovate - upgrade Talosa to swiadoma operacja.
+version: "1.12.6"
+schematic: "53513e54bb39202f35694412577a6bc53d484744d35a126e5d42ef34785c0d83"
+kubernetes: "1.35.2"

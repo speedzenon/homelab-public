@@ -4,9 +4,9 @@
 [![Security](https://github.com/speedzenon/homelab-public/actions/workflows/security.yml/badge.svg)](https://github.com/speedzenon/homelab-public/actions/workflows/security.yml)
 
 Infrastructure-as-code dla mojego homelabu, prowadzonego jak środowisko produkcyjne:
-pełny GitOps (każda zmiana przez podpisany commit i pull request), kompletna adresacja
-i sekrety zaszyfrowane SOPS — **repo jest publiczne i nie zawiera ani jednego prywatnego
-adresu IP w plaintext** — oraz automatyczne aktualizacje zależności przez Renovate.
+pełny GitOps (każda zmiana przez podpisany commit i pull request), plan adresacji
+i sekrety zaszyfrowane SOPS (jawne wyjątki oznaczone `allowlist-ip`: pula LoadBalancer
+i szablon configu CSI) oraz automatyczne aktualizacje zależności przez Renovate.
 
 ## Architektura
 
@@ -57,16 +57,16 @@ flowchart LR
 - **Hypervisor:** Proxmox VE 9.2 — klaster 2 nodów + QDevice; firewall PVE zarządzany
   z OpenTofu; token API z dedykowaną rolą least-privilege
 - **Provisioning:** OpenTofu (bpg/proxmox, terraform-routeros) + Just jako command runner
-- **Kubernetes:** Talos Linux 1.12.6 / Kubernetes 1.35.2 — 3× control-plane z VIP,
-  obrazy z Image Factory (qemu-guest-agent, iscsi-tools)
-- **CNI:** Cilium 1.19.4 — kube-proxy replacement (eBPF), LB-IPAM + L2 announcements
+- **Kubernetes:** Talos Linux / Kubernetes (wersje: `talos/versions.yaml`) — 3× control-plane
+  z VIP, obrazy z Image Factory (qemu-guest-agent, iscsi-tools)
+- **CNI:** Cilium (wersja: `kubernetes/apps/cilium.yaml`) — kube-proxy replacement (eBPF), LB-IPAM + L2 announcements
   (usługi `LoadBalancer` bez port-forwardingu)
 - **GitOps:** ArgoCD (app-of-apps, zarządza również samym sobą) + Renovate
 - **Storage:** ZFS na nodzie storage; dedykowana sieć storage (drugi NIC węzłów,
   selekcja interfejsów po adresach MAC)
 - **Secrets:** SOPS + age — pełne szyfrowanie adresacji i sekretów bootstrapu Talosa
 - **Jakość:** pre-commit (yamllint, gitleaks, shellcheck, markdownlint, Conventional
-  Commits, autorski hook blokujący plaintext RFC1918), CI (pre-commit, walidacja tytułu
+  Commits, `tofu fmt`, autorski hook blokujący plaintext RFC1918), CI (pre-commit, walidacja tytułu
   PR, gitleaks po pełnej historii, Trivy), podpisane commity + ruleset na `main`
 
 ## Stan projektu

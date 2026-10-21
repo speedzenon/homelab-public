@@ -30,7 +30,7 @@ resource "routeros_ip_dhcp_server_network" "this" {
   for_each   = local.dhcp_vlans
   address    = each.value.cidr
   gateway    = each.value.gateway
-  dns_server = [each.value.gateway]   # MikroTik jako resolver (zgodnie z network.sops.yaml)
+  dns_server = [each.value.gateway] # MikroTik jako resolver (zgodnie z network.sops.yaml)
 }
 
 resource "routeros_ip_dhcp_server_lease" "this" {
@@ -38,5 +38,5 @@ resource "routeros_ip_dhcp_server_lease" "this" {
   address     = each.value.ip
   mac_address = each.value.mac
   server      = routeros_ip_dhcp_server.this[each.value.vlan].name
-  comment     = "${each.key} (rezerwacja)"
+  comment     = each.key
 }
