@@ -8,6 +8,10 @@ default_install_hook_types:
   - pre-commit
   - commit-msg
 
+default_language_version:
+  # renovate: datasource=node-version depName=node
+  node: 22.22.2
+
 repos:
   # ----------------------------------------------------------
   # Basic file hygiene (whitespace, EOF, merge conflicts, etc.)
