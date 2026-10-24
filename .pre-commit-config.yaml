@@ -103,6 +103,16 @@ repos:
         types: [text]
         exclude: '(\.sops\.ya?ml$|^scripts/check-no-plaintext-ips\.sh$)'
 
+      # Kazdy *.sops.* musi byc zaszyfrowany: no-plaintext-ips pomija te pliki
+      # w calosci, a forbid-secrets sprawdza tylko Secrety Kubernetesa - jawnie
+      # zapisany plik SOPS przeszedlby oba. .sops.yaml w korzeniu to reguly, nie sekret.
+      - id: sops-encrypted
+        name: Pliki *.sops.* musza byc zaszyfrowane
+        entry: scripts/check-sops-encrypted.sh
+        language: script
+        files: '\.sops\.(ya?ml|json|env)$'
+        exclude: '^\.sops\.yaml$'
+
       # Formatowanie OpenTofu - wczesniej poprawiane recznie (#40). Wymaga 'tofu'
       # w PATH (lokalnie: narzedzia z README; w CI instaluje go ci.yml).
       - id: tofu-fmt

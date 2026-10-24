@@ -1,0 +1,8 @@
+# Czytelny diff plikow SOPS (git diff / git log -p pokazuja wartosci jawnie, lokalnie).
+# Wymaga jednorazowo na klonie:  git config diff.sopsdiffer.textconv "sops -d"
+# Bez tej konfiguracji git robi zwykly diff szyfrogramu. Narzedzia uzywajace
+# plumbingu (pre-commit: git diff-index) textconv nie stosuja.
+*.sops.yaml diff=sopsdiffer
+
+# .sops.yaml w korzeniu to reguly szyfrowania, nie zaszyfrowany plik
+/.sops.yaml !diff
