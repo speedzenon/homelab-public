@@ -62,7 +62,10 @@
   customManagers: [
     {
       customType: 'regex',
-      description: 'Aktualizuj zmienne *_VERSION oznaczone komentarzem # renovate:',
+      // Dwa zapisy pod komentarzem '# renovate: ...':
+      //   NAZWA_VERSION="x"  - skrypty, bloki run: w workflow (np. TOFU_VERSION)
+      //   klucz: x           - YAML (np. pin node w .pre-commit-config.yaml)
+      description: 'Aktualizuj wersje oznaczone komentarzem # renovate: (NAZWA_VERSION= oraz klucz: w YAML)',
       managerFilePatterns: [
         '/\\.ya?ml$/',
         '/\\.sh$/',
@@ -70,6 +73,7 @@
       ],
       matchStrings: [
         '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\w+_VERSION\\s*=\\s*"?(?<currentValue>[^"\\s]+)"?',
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+[\\w-]+:\\s*"?(?<currentValue>[^"\\s]+)"?',
       ],
     },
   ],
