@@ -148,6 +148,17 @@ Odszyfrowanie na stdout (debug): `sops --decrypt plik.sops.yaml`.
 Po zmianie listy odbiorców w `.sops.yaml`: `sops updatekeys plik.sops.yaml`.
 Dla VS Code ustaw `EDITOR="code --wait"`, inaczej SOPS zaszyfruje plik przed edycją.
 
+Czytelny diff zaszyfrowanych plików (`git diff`, `git log -p` pokazują wartości
+jawnie, tylko lokalnie — na GitHubie nadal widać szyfrogram). `.gitattributes`
+kieruje `*.sops.yaml` do sterownika `sopsdiffer`; włącza się go raz na klonie:
+
+```bash
+git config diff.sopsdiffer.textconv "sops -d"
+```
+
+Bez tej konfiguracji git robi zwykły diff szyfrogramu. Hook `sops-encrypted`
+blokuje commit pliku `*.sops.*`, który nie jest zaszyfrowany.
+
 ## Licencja
 
 Projekt osobisty, bez przypisanej licencji — treść nie jest przeznaczona do redystrybucji.
