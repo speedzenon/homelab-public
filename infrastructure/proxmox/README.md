@@ -2,6 +2,8 @@
 
 Provisioning Proxmox VE jako kod (provider `bpg/proxmox`):
 
+- `network.tf` — dane sieci z `../network.sops.yaml` (`local.net`) i mapowanie
+  nazw hostów na nody PVE (`local.pve_node`), wspólne dla całego modułu,
 - `talos.tf` — obraz Talos z Image Factory i VM-ki węzłów klastra `lab`
   (moduł `modules/vm`; adresy, MAC-i i VMID z `../network.sops.yaml`,
   wersja Talosa z `talos/versions.yaml`),

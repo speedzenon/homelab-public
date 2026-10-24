@@ -1,18 +1,5 @@
-# --- Network single source of truth (SOPS) ---
-data "sops_file" "network" {
-  source_file = "${path.module}/../network.sops.yaml"
-}
-
+# Dane sieci (local.net) i mapowanie hostow na nody (local.pve_node): network.tf
 locals {
-  net = nonsensitive(yamldecode(data.sops_file.network.raw))
-
-  # Logiczne nazwy hostow (SOPS) -> nazwy nodow PVE (hostname).
-  pve_node = {
-    gflip  = "proxmox"
-    wtrmax = "nas"
-    odroid = "odroid"
-  }
-
   k8s_vlan   = local.net.vlans.k8s
   k8s_prefix = split("/", local.k8s_vlan.cidr)[1] # "24"
   lab_nodes  = local.net.k8s_clusters.lab.nodes   # mapa: nazwa -> { vmid, ip, mac, host, role, storage_* }
