@@ -5,9 +5,11 @@
 provider "proxmox" {
   # Import dysku (qm disk import) idzie po SSH na noda - wymagane do tworzenia VM z obrazu.
   # Token nie ma hasla do dziedziczenia, wiec klucz z ssh-agenta + user root.
+  # try(): brak pliku klucza (CI, inna maszyna) nie wywraca validate/plan -
+  # zostaje sam ssh-agent. Gdy plik jest, dzialanie bez zmian.
   ssh {
     agent       = true
     username    = "root"
-    private_key = file(pathexpand("~/.ssh/id_ed25519"))
+    private_key = try(file(pathexpand("~/.ssh/id_ed25519")), null)
   }
 }
