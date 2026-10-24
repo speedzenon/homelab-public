@@ -7,7 +7,7 @@
 locals {
   fw_mgmt_sources = [
     local.net.vlans.oob_mgmt.cidr, # bastion/hosty
-    local.net.vlans.zenon.cidr,    # Twoja stacja
+    local.net.vlans.zenon.cidr,    # zaufane urzadzenia (caly VLAN zenon)
   ]
   fw_storage_cidr = local.net.vlans.storage.cidr
 
@@ -56,7 +56,6 @@ resource "proxmox_virtual_environment_firewall_alias" "lxc" {
   cidr     = each.value.ip
   comment  = "CT ${each.value.vmid} (${each.value.vlan})"
 }
-
 
 resource "proxmox_virtual_environment_cluster_firewall_security_group" "storage_srv" {
   name    = "storage-srv"
