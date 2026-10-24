@@ -28,6 +28,30 @@ tofu-plan dir="proxmox":
 tofu-apply dir="proxmox":
     cd infrastructure/{{dir}} && sops exec-env secrets.sops.yaml 'tofu apply'
 
+# Skrypt plynie przez SSH na stdin perla - na hoscie nic nie zostaje.
+# --- PVE: audyt firewalla gosci i szablonow (tylko odczyt). Kod: 0 OK, 1 odstepstwa, 2 blad ---
+fw-audit host="wtrmax":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    IP=$(sops -d --extract '["hosts"]["{{host}}"]["mgmt_ip"]' {{net}})
+    ssh "root@${IP}" perl - < scripts/pve-fw-audit
+
+# Adresy z SOPS -> argumenty scripts/bootstrap-media.sh, ktory sam ich nie zawiera.
+# --- Media: kontenery LXC stosu mediow (np. just media-bootstrap arr). Idempotentne. ---
+media-bootstrap +cts="jellyfin downloads arr":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    x() { sops -d --extract "$1" {{net}}; }
+    c() { x "[\"lxc\"][\"$ct\"][\"$1\"]"; }
+    v() { x "[\"vlans\"][\"$vlan\"][\"$1\"]"; }
+    for ct in {{cts}}; do
+        vlan=$(c vlan); host=$(c host); vmid=$(c vmid); ip=$(c ip)
+        vlan_id=$(v id); cidr=$(v cidr); gw=$(v gateway)
+        host_ip=$(x "[\"hosts\"][\"$host\"][\"mgmt_ip\"]")
+        echo "### $ct -> $host (VMID $vmid, VLAN $vlan_id)"
+        ssh "root@${host_ip}" bash -s -- "$ct" "$vmid" "$vlan_id" "$ip/${cidr#*/}" "$gw" < scripts/bootstrap-media.sh
+    done
+
 # --- Talos: sekrety klastra (JEDNORAZOWO; zaszyfrowane SOPS, nigdy plaintext w repo) ---
 talos-gen-secrets:
     #!/usr/bin/env bash
