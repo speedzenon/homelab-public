@@ -55,6 +55,45 @@ jobs:
           SKIP: no-commit-to-branch
 
   # ----------------------------------------------------------
+  # OpenTofu validate — skladnia, typy i referencje modulow.
+  # Bez sekretow i bez dostepu do PVE/MikroTika: init bez backendu,
+  # providery dokladnie z .terraform.lock.hcl (-lockfile=readonly).
+  # Lapie np. "Reference to undeclared resource" przed merge'em.
+  # ----------------------------------------------------------
+  tofu-validate:
+    name: OpenTofu validate (${{ matrix.module }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [proxmox, mikrotik]
+    defaults:
+      run:
+        working-directory: infrastructure/${{ matrix.module }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install OpenTofu
+        run: |
+          # renovate: datasource=github-releases depName=opentofu/opentofu
+          TOFU_VERSION="1.13.2"
+          base="https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}"
+          zip="tofu_${TOFU_VERSION}_linux_amd64.zip"
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "${base}/${zip}"
+          curl -fsSLO "${base}/tofu_${TOFU_VERSION}_SHA256SUMS"
+          grep "  ${zip}\$" "tofu_${TOFU_VERSION}_SHA256SUMS" | sha256sum -c -
+          unzip -q "$zip" tofu -d "$RUNNER_TEMP/tofu"
+          echo "$RUNNER_TEMP/tofu" >> "$GITHUB_PATH"
+
+      - name: tofu init
+        run: tofu init -backend=false -input=false -lockfile=readonly
+
+      - name: tofu validate
+        run: tofu validate -no-color
+
+  # ----------------------------------------------------------
   # Walidacja tytułu PR (Conventional Commits)
   # Przy squash merge tytuł PR staje się wiadomością commita
   # ----------------------------------------------------------

@@ -29,10 +29,11 @@ fast/k8s/iscsi/v     # zvole per PVC (RWO fs + RWX Block dla KubeVirt)
 fast/k8s/iscsi/s     # detached snapshots — RODZEŃSTWO v, nie dziecko
 fast/k8s/nfs/v       # przygotowane pod Fazę 7b (RWX Filesystem)
 fast/k8s/nfs/s
-data/media           # recordsize=1M, statyczny eksport NFS
+data/media           # recordsize=1M, statyczny eksport NFS; torrents/ + media/ (TRaSH)
 data/immich          # recordsize=1M, statyczny eksport NFS
 data/pve-vms         # 128K, shared storage PVE (HDD tier)
 fast/pve-vms         # 64K, shared storage PVE (NVMe tier)
+fast/pve-ct          # 16K, rootfs kontenerów LXC (storage PVE fast-ct)
 ```
 
 ### Dlaczego `v` i `s` są rodzeństwem
@@ -53,6 +54,14 @@ nie planuje się snapshotów** — sterownik nie akceptuje braku tego pola.
   istnieje tylko przy losowych *częściowych* nadpisaniach wewnątrz dużych plików;
   media to workload zapisz-raz-czytaj-wiele. Małe pliki (miniatury) nie tracą,
   bo `recordsize` to *górny limit*, nie stały rozmiar.
+- **Pobieranie torrentów w tym samym `data/media`** (`torrents/` obok `media/`) —
+  jeden dataset to warunek hardlinków: Sonarr/Radarr dodają plik do biblioteki
+  jako drugą nazwę tego samego inode, bez kopii. Hardlink między datasetami
+  (osobnymi systemami plików) jest niemożliwy. 1M ogranicza też fragmentację
+  przy losowym zapisie kawałków torrenta.
+- **16K na fast/pve-ct** — rootfs kontenerów LXC to głównie bazy SQLite aplikacji
+  (Jellyfin, Sonarr, Radarr, Prowlarr) z losowymi zapisami małych stron. Mniejszy
+  rekord ogranicza read-modify-write; reszta rootfs na NVMe znosi to bez odczuwalnej kary.
 - **64K na fast/pve-vms** — qcow2 ma domyślny cluster size 64K; wyrównanie
   eliminuje read-modify-write.
 - **128K na data/pve-vms** — domyślne, mniej IOPS-ożerne na HDD.
@@ -317,6 +326,16 @@ nigdy nie tworzyć ręcznie datasetów o takich nazwach pod naszymi ścieżkami.
 Przepustowość: dyski VM z `fast` po NFS są ograniczone siecią (2,5G ≈ 280 MB/s
 plus latencja na każdym sync). To cena za live migration. Alternatywa lokalna
 (storage zfspool `fast`) pozostaje dostępna per VM.
+
+Rootfs kontenerów LXC trafia na lokalny storage `fast-ct` (dataset `fast/pve-ct`),
+nie na NFS: rootfs kontenera na storage plikowym to obraz raw bez snapshotów,
+a snapshot przed ryzykowną zmianą jest tu podstawowym zabezpieczeniem. Osobny
+dataset zamiast korzenia puli `fast` — własny recordsize i porządek w puli:
+
+```bash
+zfs create -o recordsize=16K -o compression=lz4 fast/pve-ct
+pvesm add zfspool fast-ct --pool fast/pve-ct --content rootdir --sparse 1 --nodes nas
+```
 
 ## 9. Diagnostyka — katalog odcisków palca
 
