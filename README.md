@@ -111,6 +111,7 @@ homelab/
 │   ├── apps/              Application-y (app-of-apps)
 │   ├── infrastructure/    Zasoby klastrowe (pula LB Cilium, polityka L2)
 │   └── platform/ policies/  Placeholdery pod roadmapę
+├── scripts/               Bootstrap SDN i kontenerów LXC, audyt firewalla PVE, hooki
 ├── justfile               Cały workflow: git, tofu, talos, bootstrap komponentów
 └── .github/workflows/     CI + security pipeline
 ```

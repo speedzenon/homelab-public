@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+# pve-fw-audit: goscie i szablony PVE bez pelnego firewalla
+# (wylaczona opcja goscia, polityka wejsciowa inna niz DROP/REJECT, karta bez firewall=1).
+# Kod wyjscia: 0 = wszystko zgodne, 1 = sa odstepstwa, 2 = blad samego audytu.
+#
+# Uruchamianie: 'just fw-audit' (strumieniuje ten plik przez SSH na wezel PVE)
+# albo na wezle jako root: perl pve-fw-audit
+# Tylko odczyt (pvesh get), niczego nie zmienia. Wymaga wylacznie Perla z PVE
+# (JSON::PP jest w standardowej dystrybucji) - na hiperwizorze bez dodatkowych pakietow.
+# Szablony sa audytowane, bo klon dziedziczy konfiguracje firewalla szablonu.
+use strict;
+use warnings;
+use JSON::PP;
+
+$SIG{__DIE__} = sub { print STDERR "pve-fw-audit: $_[0]"; exit 2 };
+
+sub api {
+    my ($path, @args) = @_;
+    open(my $fh, '-|', 'pvesh', 'get', $path, @args, '--output-format', 'json')
+        or die "nie moge uruchomic pvesh\n";
+    my $out = do { local $/; <$fh> };
+    close($fh) or die "pvesh get $path nie powiodl sie\n";
+    return decode_json($out);
+}
+
+my $guests = api('/cluster/resources', '--type', 'vm');
+@$guests or die "pusta lista gosci\n";
+
+my $bad = 0;
+for my $g (sort { $a->{vmid} <=> $b->{vmid} } @$guests) {
+    my $base = "/nodes/$g->{node}/$g->{type}/$g->{vmid}";
+    my $opt  = api("$base/firewall/options");
+    my $en   = $opt->{enable} // 0;
+    my $pin  = $opt->{policy_in} // 'DROP';
+    my $cfg  = api("$base/config");
+    my @nics = sort grep { /^net\d+$/ && $cfg->{$_} !~ /(?:^|,)firewall=1(?:,|$)/ } keys %$cfg;
+    next if $en && $pin =~ /^(?:DROP|REJECT)$/ && !@nics;
+    my $name = ($g->{name} // '-') . ($g->{template} ? ' [szablon]' : '');
+    printf "%-8s %-5s %-6s %-26s guest_fw=%s in=%-6s nic_bez_fw=%s\n",
+        $g->{node}, $g->{type}, $g->{vmid}, $name, $en, ($en ? $pin : '-'),
+        (@nics ? join(',', @nics) : '-');
+    $bad++;
+}
+if ($bad) { print STDERR "Odstepstw: $bad\n"; exit 1 }
+print "OK: wszyscy goscie i szablony maja pelny firewall\n";
