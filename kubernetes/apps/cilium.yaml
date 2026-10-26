@@ -4,6 +4,8 @@
 # - zrodlo 2: to repo jako 'ref' -> values z kubernetes/bootstrap/cilium/
 # automated wlaczone po udanej adopcji (reczny App Diff + Sync na starcie).
 # UWAGA: podbicie wersji CNI = roll agentow na wszystkich wezlach - review PR.
+# Gateway API: wersja CRD sprzezona z Cilium (gateway-api-crds.yaml w tym katalogu).
+# Gdy nowy Cilium wymaga nowszych CRD - osobny PR z CRD, zmergowany PRZED tym.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

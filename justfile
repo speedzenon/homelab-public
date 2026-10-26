@@ -6,20 +6,22 @@ net       := "infrastructure/network.sops.yaml"
 tsecrets  := "talos/secrets/lab-secrets.sops.yaml"
 
 # Wersje z jednego zrodla: talos/versions.yaml (czyta je tez tofu) oraz
-# targetRevision Application-ow w kubernetes/apps/ (podbijane przez Renovate).
+# targetRevision Application-ow w kubernetes/apps/ (podbijane przez Renovate;
+# wyjatek: CRD Gateway API - recznie, razem z Cilium).
 talos_version   := `awk -F': *' '$1=="version"{gsub(/"/,"",$2); split($2,a," "); print a[1]}' talos/versions.yaml`
 talos_schematic := `awk -F': *' '$1=="schematic"{gsub(/"/,"",$2); split($2,a," "); print a[1]}' talos/versions.yaml`
 k8s_version     := `awk -F': *' '$1=="kubernetes"{gsub(/"/,"",$2); split($2,a," "); print a[1]}' talos/versions.yaml`
 install_image   := "factory.talos.dev/installer/" + talos_schematic + ":v" + talos_version
 cilium_version  := `awk '/^[[:space:]]+targetRevision:/{print $2; exit}' kubernetes/apps/cilium.yaml`
 argocd_version  := `awk '/^[[:space:]]+targetRevision:/{print $2; exit}' kubernetes/apps/argocd.yaml`
+gateway_version := `awk '/^[[:space:]]+targetRevision:/{print $2; exit}' kubernetes/apps/gateway-api-crds.yaml`
 
 default:
     @just --list
 
 # Pusta wartosc = zly format pliku z wersjami; blokuje recepty, zanim cos zepsuja
 _versions:
-    @for v in "talos_version={{talos_version}}" "talos_schematic={{talos_schematic}}" "k8s_version={{k8s_version}}" "cilium_version={{cilium_version}}" "argocd_version={{argocd_version}}"; do [ -n "${v#*=}" ] || { echo "BLAD: pusta wersja ${v%%=*} (talos/versions.yaml / kubernetes/apps)"; exit 1; }; done
+    @for v in "talos_version={{talos_version}}" "talos_schematic={{talos_schematic}}" "k8s_version={{k8s_version}}" "cilium_version={{cilium_version}}" "argocd_version={{argocd_version}}" "gateway_version={{gateway_version}}"; do [ -n "${v#*=}" ] || { echo "BLAD: pusta wersja ${v%%=*} (talos/versions.yaml / kubernetes/apps)"; exit 1; }; done
 
 # --- OpenTofu (dir: proxmox | mikrotik) ---
 tofu-plan dir="proxmox":
@@ -159,9 +161,17 @@ done:
     done
 
 # --- Bootstrap klastra (Day-1 / odbudowa), w tej kolejnosci:
-#     cilium-install -> csi-secret -> argocd-install
-# Wersje chartow = targetRevision z kubernetes/apps/ - helm CLI instaluje dokladnie
-# to, co potem adoptuje ArgoCD.
+#     gateway-crds -> cilium-install -> csi-secret -> argocd-install
+# Wersje chartow i CRD = targetRevision z kubernetes/apps/ - helm i kubectl instaluja
+# dokladnie to, co potem adoptuje ArgoCD.
+
+# Release'owy standard-install.yaml = te same obiekty co katalog config/crd/standard,
+# z ktorego synchronizuje Application gateway-api-crds. --force-conflicts: przy
+# ponownym uruchomieniu (break-glass) pola naleza juz do Argo.
+# Day-1 PRZED cilium-install: CRD Gateway API (operator Cilium sprawdza je przy starcie)
+gateway-crds: _versions
+    kubectl apply --server-side --force-conflicts \
+        -f https://github.com/kubernetes-sigs/gateway-api/releases/download/{{gateway_version}}/standard-install.yaml
 
 # Day-1 (bez CNI pody ArgoCD nie wstana) oraz break-glass, gdy ArgoCD lezy
 cilium-install: _versions
