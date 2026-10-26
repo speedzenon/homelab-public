@@ -44,3 +44,23 @@ k8sClientRateLimit:
 rollOutCiliumPods: true
 operator:
   rollOutPods: true
+# Gateway API: kontroler wbudowany w Cilium - routing L7 robi Envoy (DaemonSet
+# cilium-envoy), bez osobnego ingress-controllera. Kazdy Gateway dostaje Service
+# LoadBalancer -> adres z puli LB-IPAM, rozglaszany przez L2.
+# CRD z kubernetes/apps/gateway-api-crds.yaml MUSZA byc w klastrze wczesniej:
+# operator sprawdza je przy starcie i bez nich wylacza Gateway API az do restartu.
+# Flagi jak w dokumentacji Talosa (kubernetes-guides/cni/deploying-cilium):
+# - enableAlpn: Envoy negocjuje HTTP/2 przez ALPN (gRPC po TLS, GRPCRoute)
+# - enableAppProtocol: protokol do backendu z pola appProtocol w Service
+#   (np. kubernetes.io/h2c); ALPN i tak go wlacza, tu jawnie
+# Chart wymusza przy tym bpf-lb-sock-hostns-only i bpf-lb-algorithm-annotation
+# (wagi backendow w TCPRoute/UDPRoute) - stad wiecej kluczy w diffie cilium-config.
+gatewayAPI:
+  enabled: true
+  enableAlpn: true
+  enableAppProtocol: true
+  # GatewayClass 'cilium' zawsze z chartu. Domyslne 'auto' po cichu ja pomija,
+  # gdy w chwili renderowania nie ma CRD - wolimy glosny blad syncu (i helm
+  # install na Day-1) niz "zielony" sync bez klasy.
+  gatewayClass:
+    create: true

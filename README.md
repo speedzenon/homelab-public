@@ -60,7 +60,8 @@ flowchart LR
 - **Kubernetes:** Talos Linux / Kubernetes (wersje: `talos/versions.yaml`) — 3× control-plane
   z VIP, obrazy z Image Factory (qemu-guest-agent, iscsi-tools)
 - **CNI:** Cilium (wersja: `kubernetes/apps/cilium.yaml`) — kube-proxy replacement (eBPF), LB-IPAM + L2 announcements
-  (usługi `LoadBalancer` bez port-forwardingu)
+  (usługi `LoadBalancer` bez port-forwardingu), Gateway API (wbudowany kontroler na Envoyu zamiast osobnego
+  ingress-controllera)
 - **GitOps:** ArgoCD (app-of-apps, zarządza również samym sobą) + Renovate
 - **Storage:** ZFS na nodzie storage; dedykowana sieć storage (drugi NIC węzłów,
   selekcja interfejsów po adresach MAC)
