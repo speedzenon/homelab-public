@@ -161,7 +161,7 @@ done:
     done
 
 # --- Bootstrap klastra (Day-1 / odbudowa), w tej kolejnosci:
-#     gateway-crds -> cilium-install -> csi-secret -> argocd-install
+#     gateway-crds -> cilium-install -> csi-secret -> ovh-secret -> argocd-install
 # Wersje chartow i CRD = targetRevision z kubernetes/apps/ - helm i kubectl instaluja
 # dokladnie to, co potem adoptuje ArgoCD.
 
@@ -188,6 +188,15 @@ csi-secret:
     kubectl create namespace democratic-csi --dry-run=client -o yaml | kubectl apply -f -
     sops exec-file --no-fifo kubernetes/platform/democratic-csi-iscsi/config.sops.yaml \
         'kubectl create secret generic democratic-csi-iscsi-config --namespace democratic-csi --from-file=driver-config-file.yaml={} --dry-run=client -o yaml' | \
+        kubectl apply --server-side --force-conflicts -f -
+
+# Ten sam wzorzec co csi-secret. --output-type dotenv: sops oddaje plik jako
+# KLUCZ=wartosc, a kubectl robi z kazdej linii osobny klucz Secretu.
+# Secret z kluczem API OVH dla webhooka DNS-01 cert-managera (poza GitOps)
+ovh-secret:
+    kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
+    sops exec-file --no-fifo --output-type dotenv kubernetes/platform/cert-manager-webhook-ovh/ovh-credentials.sops.yaml \
+        'kubectl create secret generic ovh-credentials --namespace cert-manager --from-env-file={} --dry-run=client -o yaml' | \
         kubectl apply --server-side --force-conflicts -f -
 
 argocd-install: _versions

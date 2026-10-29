@@ -1,0 +1,25 @@
+# cert-manager (chart jetstack/cert-manager). Domyslne values chartu sa rozsadne -
+# tu tylko to, co zmieniamy swiadomie.
+
+# CRD z chartu. keep=true dodaje adnotacje helm.sh/resource-policy=keep (ochrona
+# przy 'helm uninstall'); usuniecie samej Application tez ich nie skasuje, bo
+# Application nie ma finalizera resources-finalizer.
+crds:
+  enabled: true
+  keep: true
+
+global:
+  # Lease leader election we wlasnym namespace zamiast domyslnego kube-system:
+  # cert-manager nie dostaje zadnej Roli w kube-system.
+  leaderElection:
+    namespace: cert-manager
+
+# Samosprawdzenie DNS-01 (czy rekord TXT juz widac, zanim Let's Encrypt zacznie
+# walidacje) WYLACZNIE przez publiczne resolvery po DoH - DNS w HTTPS, port 443:
+# - split-horizon: MikroTik zna strefe int.<domena> inaczej niz reszta swiata
+# - DoH nie zalezy od tego, co router robi z ruchem na porcie 53
+# '-only': takze sprawdzenie propagacji idzie przez te resolvery; bez tego
+# cert-manager pytalby serwery autorytatywne OVH bezposrednio po porcie 53.
+# Koszt: cache resolverow moze wydluzyc sprawdzenie o kilka minut.
+dns01RecursiveNameservers: "https://1.1.1.1/dns-query,https://dns.quad9.net/dns-query"
+dns01RecursiveNameserversOnly: true

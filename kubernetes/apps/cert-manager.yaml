@@ -1,0 +1,47 @@
+# cert-manager: kontroler, ktory sam zamawia i odnawia certyfikaty (tu: ACME /
+# Let's Encrypt z walidacja DNS-01; webhook OVH to osobna Application).
+# Multi-source jak cilium/argocd: chart z charts.jetstack.io, targetRevision =
+# JEDYNE zrodlo wersji (Renovate podbija tutaj) + values z tego repo.
+#
+# CRD instaluje chart (crds.enabled w values). UWAGA: wylaczenie crds.enabled
+# = prune CRD przez Argo = skasowanie WSZYSTKICH Certificate i Issuer w klastrze.
+# ServerSideApply: CRD przekraczaja limit adnotacji client-side apply.
+#
+# Namespace z Pod Security 'restricted': pody cert-managera spelniaja go
+# z domyslnych values chartu (runAsNonRoot, seccomp RuntimeDefault, drop ALL).
+# Webhook OVH wejdzie do tego samego namespace z takim samym utwardzeniem.
+#
+# automated od razu: zwykle Deploymenty bez uprawnien privileged, nic do adopcji.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: v1.21.3
+      helm:
+        releaseName: cert-manager
+        valueFiles:
+          - $values/kubernetes/platform/cert-manager/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+        pod-security.kubernetes.io/audit: restricted
