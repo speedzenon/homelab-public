@@ -1,0 +1,37 @@
+# Gateway API: CRD z kanalu standard (Gateway, HTTPRoute, GRPCRoute, TCPRoute,
+# TLSRoute, ...) oraz polityka admission 'safe-upgrades' z tego samego katalogu -
+# blokuje nadpisanie CRD kanalem experimental i cofniecie do wersji < v1.5.
+#
+# Wersja SPRZEZONA z Cilium (kontroler Gateway API w klastrze): Cilium 1.20
+# wymaga v1.6.3 (docs.cilium.io -> Gateway API Support -> Prerequisites).
+# Podbijana RECZNIE i PRZED nowszym Cilium - Renovate ma ja wylaczona.
+#
+# MUSI byc w klastrze PRZED gatewayAPI.enabled w values Cilium: operator sprawdza
+# CRD przy starcie i bez nich wylacza Gateway API az do restartu. Day-1 / odbudowa:
+# 'just gateway-crds' przed 'just cilium-install' - ArgoCD adoptuje te same obiekty.
+#
+# prune=false CELOWO: usuniecie CRD kasuje kazdy obiekt tego typu w klastrze
+# (wszystkie Gateway i trasy). Gdy nowa wersja usunie plik z katalogu, sprzatamy
+# recznie i swiadomie. Brak finalizera resources-finalizer z tego samego powodu:
+# skasowanie samej Application zostawia CRD w klastrze.
+# ServerSideApply: najwiekszy CRD (httproutes, ~430 KB) nie miesci sie w adnotacji
+# last-applied-configuration, ktorej uzywa client-side apply (limit 256 KB).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api-crds
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kubernetes-sigs/gateway-api.git
+    targetRevision: v1.6.3
+    path: config/crd/standard
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

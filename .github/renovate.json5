@@ -47,6 +47,23 @@
       addLabels: ['cluster-core'],
     },
     {
+      // Wersja CRD musi pasować do kontrolera w Cilium (Cilium 1.20 <-> v1.6.3).
+      // Samodzielny bump mógłby wgrać CRD, których zainstalowany Cilium nie obsługuje.
+      // Manager argocd nadaje źródłom git depName = repoURL.
+      description: 'Gateway API CRD — bez automatycznych bumpów, podbijane ręcznie przed Cilium',
+      matchManagers: ['argocd'],
+      matchDepNames: ['https://github.com/kubernetes-sigs/gateway-api.git'],
+      enabled: false,
+    },
+    {
+      description: 'Cilium — w każdym PR przypomnienie o sprzężonej wersji CRD Gateway API',
+      matchManagers: ['argocd'],
+      matchDepNames: ['cilium'],
+      prBodyNotes: [
+        '⚠️ Sprawdź wymaganą wersję CRD Gateway API dla tej wersji Cilium (docs Cilium: Gateway API Support → Prerequisites). Jeśli jest nowsza niż w `kubernetes/apps/gateway-api-crds.yaml`, podbij ją osobnym PR-em i zmerguj go **przed** tym: nowsze CRD obsługują stare wersje API, odwrotnie nie.',
+      ],
+    },
+    {
       description: 'Auto-merge pinów SHA dla GitHub Actions (niskie ryzyko)',
       matchManagers: ['github-actions'],
       matchUpdateTypes: ['digest', 'pin'],
