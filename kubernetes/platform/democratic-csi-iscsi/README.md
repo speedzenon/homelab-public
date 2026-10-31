@@ -44,7 +44,7 @@ potem `kubectl rollout restart` na controllerze i node DaemonSecie.
 
 ## Kolejnosc wdrozenia (Day-1 / odbudowa)
 
-`just gateway-crds` -> `just cilium-install` -> `just csi-secret` -> `just argocd-install`. Secret musi
+Pelna kolejnosc: komentarz "Bootstrap klastra" w `justfile`. Tu wazne: `just csi-secret` PRZED `just argocd-install`. Secret musi
 byc PRZED syncem sterownika (wszystkie App-y maja automated) - inaczej controller-pod
 wisi w ContainerCreating (FailedMount) do czasu utworzenia Secretu. Argo
 (CreateNamespace + managedNamespaceMetadata) naklada etykiety PSA na istniejacy namespace.
