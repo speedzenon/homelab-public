@@ -1,5 +1,6 @@
-# Wejscie HTTPS do klastra: namespace 'gateway' z certyfikatem wildcard dla uslug
-# wewnetrznych, a w fazie 3 takze Gateway 'internal' i jego trasy wspolne.
+# Wejscie HTTPS do klastra: namespace 'gateway' z Gatewayem 'internal', certyfikatem
+# wildcard dla uslug wewnetrznych i trasa wspolna (przekierowanie HTTP -> HTTPS).
+# Trasy aplikacji zyja przy aplikacjach (np. HTTPRoute ArgoCD z jego chartu).
 # Wymaga CRD cert-managera (Certificate) i Gateway API.
 #
 # W namespace nie dzialaja zadne pody (Envoy Gatewaya zyje w kube-system jako

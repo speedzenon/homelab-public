@@ -210,5 +210,14 @@ argocd-install: _versions
 argocd-password:
     @kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
 
+# Na co dzien UI jest pod https://argocd.int.dawidkraska.pl (Gateway 'internal').
+# UI ArgoCD przez port-forward (break-glass, gdy Gateway/DNS/certyfikat leza): http://localhost:8080
 argocd-ui:
     kubectl -n argocd port-forward svc/argocd-server 8080:80
+
+# ArgoCD sprawdza repo co kilka minut; refresh robi to od razu, a synchronizacje
+# automated sync. 'root' - gdy zmieniaja sie pliki w kubernetes/apps/; gdy tylko
+# zasoby lub values aplikacji - jej nazwa (mozna kilka: just refresh gateway argocd)
+# Wymusza odswiezenie aplikacji ArgoCD po merge'u (domyslnie root)
+refresh +apps="root":
+    kubectl -n argocd annotate applications.argoproj.io {{apps}} argocd.argoproj.io/refresh=normal --overwrite
