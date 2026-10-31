@@ -1,0 +1,29 @@
+# Certyfikat wildcard dla wszystkich uslug wewnetrznych (*.int.dawidkraska.pl).
+# Terminowany na Gatewayu 'internal' (faza 3) - Secret w tym samym namespace,
+# wiec Gateway siega po niego bez ReferenceGrant.
+# - jeden wildcard zamiast certyfikatu na usluge: w publicznych logach Certificate
+#   Transparency widac tylko *.int.dawidkraska.pl, a nowa usluga nie wymaga
+#   nowego certyfikatu; gwiazdka obejmuje dokladnie jeden poziom nazwy
+# - wildcard tylko przez DNS-01 (rekord TXT w strefie OVH, webhook OVH)
+# - najpierw issuer staging (test procesu), potem zmiana issuerRef na prod
+# - ECDSA P-256: mniejszy i szybszy niz RSA, obslugiwany przez wszystkich klientow;
+#   rotationPolicy Always = nowy klucz przy kazdym odnowieniu
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-int
+  namespace: gateway
+spec:
+  secretName: wildcard-int-tls
+  dnsNames:
+    - "*.int.dawidkraska.pl"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-staging
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  # Historia CertificateRequest (odnowienie co ~60 dni) - trzy ostatnie wystarcza
+  revisionHistoryLimit: 3
