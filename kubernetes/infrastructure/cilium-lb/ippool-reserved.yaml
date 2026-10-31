@@ -1,0 +1,18 @@
+# Stale VIP-y LoadBalancer (LB-IPAM): adresy, na ktore wskazuja rekordy DNS.
+# Blok z zakresu 'statyczne uslugi/VIP-y' (.20-.99, docs/runbooks/local-addressing.md),
+# rozlaczny z dynamiczna pula lab-pool (nakladajace sie pule Cilium oznacza jako
+# Conflicting). Klucz io.kubernetes.service.namespace to specjalny selektor LB-IPAM
+# (namespace uslugi, nie etykieta): adres stad dostanie tylko Service z namespace
+# 'gateway', zwykly Service LoadBalancer nigdy. Przydzialy: k8s_clusters.lab.lb_reserved
+# w network.sops.yaml, sam adres zamawia Gateway w spec.addresses.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: lab-reserved
+spec:
+  blocks:
+    - start: 10.0.30.90  # allowlist-ip
+      stop: 10.0.30.99   # allowlist-ip
+  serviceSelector:
+    matchLabels:
+      io.kubernetes.service.namespace: gateway

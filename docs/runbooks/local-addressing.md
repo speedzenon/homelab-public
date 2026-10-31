@@ -7,6 +7,11 @@
 .200–.249 wolne
 .250–.254 specjalne
 
+W VLAN-ie `k8s` blok .90–.99 to stałe VIP-y LoadBalancer — pula LB-IPAM
+`lab-reserved` (`kubernetes/infrastructure/cilium-lb/ippool-reserved.yaml`),
+dostępna tylko dla usług z namespace `gateway`. Przydziały:
+`k8s_clusters.lab.lb_reserved` w `network.sops.yaml`.
+
 ## VMID gości
 
 Gość ze statycznym adresem z zakresu .20–.99 dostaje VMID wynikający

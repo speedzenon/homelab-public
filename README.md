@@ -5,8 +5,8 @@
 
 Infrastructure-as-code dla mojego homelabu, prowadzonego jak środowisko produkcyjne:
 pełny GitOps (każda zmiana przez podpisany commit i pull request), plan adresacji
-i sekrety zaszyfrowane SOPS (jawne wyjątki oznaczone `allowlist-ip`: pula LoadBalancer
-i szablon configu CSI) oraz automatyczne aktualizacje zależności przez Renovate.
+i sekrety zaszyfrowane SOPS (jawne wyjątki oznaczone `allowlist-ip`: pule i VIP-y
+LoadBalancer oraz szablon configu CSI) oraz automatyczne aktualizacje zależności przez Renovate.
 
 ## Architektura
 
@@ -81,6 +81,9 @@ flowchart LR
 - Hypervisor: klaster PVE + QDevice, provisioning VM z OpenTofu, firewall jako kod
 - Kubernetes: 3-węzłowy klaster Talos, Cilium z pulą LoadBalancer (L2), pełny health
 - GitOps: ArgoCD app-of-apps, adopcja Cilium, self-management ArgoCD
+- Wejście HTTPS: Gateway API na stałym VIP-ie z wydzielonej puli, wildcard Let's Encrypt
+  (DNS-01 przez OVH), rekord DNS na MikroTiku z OpenTofu sprawdzany względem manifestu
+  Gatewaya; ArgoCD pod własną nazwą zamiast port-forwardu
 - Storage: pule ZFS (`fast`, `data`) po burn-in dysków, nieroutowana sieć storage E2E
 
 ### W toku

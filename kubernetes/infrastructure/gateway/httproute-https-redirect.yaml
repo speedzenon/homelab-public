@@ -1,0 +1,21 @@
+# HTTP -> HTTPS (301) dla wszystkich nazw *.int na Gatewayu 'internal'. Bez 'hostnames'
+# trasa dziedziczy hostname listenera 'http', wiec obejmuje tez przyszle uslugi.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: https-redirect
+  namespace: gateway
+spec:
+  parentRefs:
+    - name: internal
+      sectionName: http
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

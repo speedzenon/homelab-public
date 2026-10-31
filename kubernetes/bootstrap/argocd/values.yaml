@@ -1,9 +1,27 @@
 # ArgoCD bootstrap (helm chart argo/argo-cd).
 # - dex wylaczony: SSO dopiero z Authentikiem (wtedy OIDC bezposrednio)
-# - server.insecure: HTTP tylko wewnatrz klastra (ClusterIP, zero ekspozycji);
-#   TLS bedzie terminowany na gateway'u, do tego czasu dostep przez port-forward
+# - server.insecure: ArgoCD mowi czystym HTTP wewnatrz klastra (ClusterIP); TLS
+#   konczy sie na Gatewayu 'internal' (kubernetes/infrastructure/gateway/)
+# - global.domain: adres UI. Chart buduje z niego 'url' w argocd-cm (linki,
+#   pozniej przekierowania OIDC). Kotwica &argocd_host / *argocd_host: ta sama
+#   nazwa trafia do HTTPRoute, bez drugiej kopii do pilnowania
+global:
+  domain: &argocd_host argocd.int.dawidkraska.pl
 dex:
   enabled: false
 configs:
   params:
     server.insecure: true
+server:
+  # HTTPRoute z chartu, podpiety pod listener https Gatewaya 'internal'; backend
+  # to port HTTP serwisu (chart wybiera go sam przy server.insecure). 'hostnames'
+  # obowiazkowe - bez nich trasa przejelaby wszystkie nazwy *.int. Trasa jest HTTP,
+  # wiec CLI laczy sie przez gRPC-Web: argocd login <host> --grpc-web
+  httproute:
+    enabled: true
+    parentRefs:
+      - name: internal
+        namespace: gateway
+        sectionName: https
+    hostnames:
+      - *argocd_host

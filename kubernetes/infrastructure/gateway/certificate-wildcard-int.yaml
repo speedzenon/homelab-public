@@ -1,11 +1,13 @@
 # Certyfikat wildcard dla wszystkich uslug wewnetrznych (*.int.dawidkraska.pl).
-# Terminowany na Gatewayu 'internal' (faza 3) - Secret w tym samym namespace,
-# wiec Gateway siega po niego bez ReferenceGrant.
+# Terminowany na Gatewayu 'internal' (gateway-internal.yaml) - Secret w tym samym
+# namespace, wiec Gateway siega po niego bez ReferenceGrant.
 # - jeden wildcard zamiast certyfikatu na usluge: w publicznych logach Certificate
 #   Transparency widac tylko *.int.dawidkraska.pl, a nowa usluga nie wymaga
 #   nowego certyfikatu; gwiazdka obejmuje dokladnie jeden poziom nazwy
 # - wildcard tylko przez DNS-01 (rekord TXT w strefie OVH, webhook OVH)
-# - najpierw issuer staging (test procesu), potem zmiana issuerRef na prod
+# - issuer prod; staging posluzyl do sprawdzenia procesu. Prod ma limity (m.in. 5
+#   identycznych certyfikatow na tydzien, 5 nieudanych walidacji na godzine), wiec
+#   zmiany w lancuchu DNS-01 (klucz OVH, webhook) najpierw testowac na stagingu
 # - ECDSA P-256: mniejszy i szybszy niz RSA, obslugiwany przez wszystkich klientow;
 #   rotationPolicy Always = nowy klucz przy kazdym odnowieniu
 apiVersion: cert-manager.io/v1
@@ -20,7 +22,7 @@ spec:
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
-    name: letsencrypt-staging
+    name: letsencrypt-prod
   privateKey:
     algorithm: ECDSA
     size: 256

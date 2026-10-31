@@ -1,0 +1,50 @@
+# Gateway 'internal': wspolne wejscie HTTPS do uslug wewnetrznych (*.int.dawidkraska.pl).
+# Cilium tworzy dla niego Service LoadBalancer 'cilium-gateway-internal'; ruch obsluguje
+# Envoy z DaemonSetu cilium-envoy (kube-system), wiec w tym namespace nie ma podow.
+#
+# - addresses: staly VIP z puli lab-reserved (kubernetes/infrastructure/cilium-lb/).
+#   Wskazuje na niego rekord DNS na MikroTiku (infrastructure/mikrotik/dns.tf, adres
+#   z lb_reserved.gateway-internal w SOPS); gdy oba sie rozjada, tofu plan sie zatrzyma.
+#   Plik czyta tez tofu (yamldecode) - musi zostac jednym dokumentem YAML
+# - https: TLS konczy sie tutaj, certyfikat z Certificate wildcard-int (ten sam namespace,
+#   bez ReferenceGrant). Trasy tylko z namespace'ow z listy: nowa usluga = nowy wpis,
+#   wiec ten plik pokazuje wszystko, co wystawiamy. Etykiete kubernetes.io/metadata.name
+#   nadaje apiserver i zawsze jest rowna nazwie namespace'u - nie da sie jej podrobic
+# - http: wylacznie przekierowanie na https (httproute-https-redirect.yaml); trasy tylko
+#   z tego namespace'u, wiec zadna aplikacja nie wystawi sie po czystym HTTP
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: internal
+  namespace: gateway
+spec:
+  gatewayClassName: cilium
+  addresses:
+    - type: IPAddress
+      value: 10.0.30.90  # allowlist-ip
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.int.dawidkraska.pl"
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.int.dawidkraska.pl"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: wildcard-int-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - argocd
