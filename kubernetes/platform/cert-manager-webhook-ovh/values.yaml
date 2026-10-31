@@ -1,0 +1,30 @@
+# Webhook DNS-01 dla OVH (chart aureq/cert-manager-webhook-ovh).
+
+# Nazwa grupy API, pod ktora webhook rejestruje sie w apiserverze (APIService
+# v1alpha1.<groupName>). Musi byc unikalna w klastrze; nikt jej nie rozwiazuje
+# w DNS. Ta sama wartosc w ClusterIssuerach (kubernetes/infrastructure/cert-manager/).
+groupName: acme.dawidkraska.pl
+
+# ClusterIssuery piszemy sami: chart wymaga w swoich issuerach adresu e-mail,
+# ktorego nie chcemy w publicznym repo. Skutek uboczny: chart nie nada wtedy
+# webhookowi prawa do Secretu z kluczem - Role jest obok issuerow.
+issuers: []
+
+pod:
+  securityContext:
+    # Namespace cert-manager ma Pod Security 'restricted'. Domyslne values
+    # chartu nie ustawiaja runAsNonRoot, seccomp ani drop ALL - apiserver
+    # odrzucilby pod, wiec dokladamy brakujace pola.
+    pod:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    container:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      privileged: false
+      capabilities:
+        drop:
+          - ALL

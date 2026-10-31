@@ -1,0 +1,23 @@
+# Konfiguracja cert-managera jako zwykle manifesty (wzorzec cilium-config):
+# ClusterIssuery Let's Encrypt (staging, prod) i prawo webhooka OVH do Secretu
+# z kluczem API. Wymaga CRD z Application cert-manager.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-config
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/speedzenon/homelab-public.git
+    targetRevision: main
+    path: kubernetes/infrastructure/cert-manager
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

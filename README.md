@@ -62,6 +62,8 @@ flowchart LR
 - **CNI:** Cilium (wersja: `kubernetes/apps/cilium.yaml`) — kube-proxy replacement (eBPF), LB-IPAM + L2 announcements
   (usługi `LoadBalancer` bez port-forwardingu), Gateway API (wbudowany kontroler na Envoyu zamiast osobnego
   ingress-controllera)
+- **Certyfikaty:** cert-manager + Let's Encrypt z walidacją DNS-01 przez webhook OVH — jeden wildcard
+  dla usług wewnętrznych; klucz API OVH zawężony do rekordów jednej strefy
 - **GitOps:** ArgoCD (app-of-apps, zarządza również samym sobą) + Renovate
 - **Storage:** ZFS na nodzie storage; dedykowana sieć storage (drugi NIC węzłów,
   selekcja interfejsów po adresach MAC)
