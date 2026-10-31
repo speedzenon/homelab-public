@@ -28,3 +28,10 @@ pod:
       capabilities:
         drop:
           - ALL
+        # Obraz nadaje binarce /app capability pliku (Dockerfile webhooka:
+        # setcap cap_net_bind_service=+ep). Gdy tej capability nie ma w zbiorze
+        # granicznym (drop ALL), jadro odmawia exec - "exec /app: operation not
+        # permitted", CrashLoopBackOff. 'restricted' pozwala dodac z powrotem
+        # dokladnie te jedna capability.
+        add:
+          - NET_BIND_SERVICE
