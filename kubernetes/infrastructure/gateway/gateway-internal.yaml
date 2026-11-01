@@ -12,6 +12,9 @@
 #   nadaje apiserver i zawsze jest rowna nazwie namespace'u - nie da sie jej podrobic
 # - http: wylacznie przekierowanie na https (httproute-https-redirect.yaml); trasy tylko
 #   z tego namespace'u, wiec zadna aplikacja nie wystawi sie po czystym HTTP
+# - ssh: TCP 22 dla Forgejo (TCPRoute). Bez TLS i bez nazwy hosta - na porcie L4 nie ma
+#   po czym rozrozniac uslug, dlatego jeden listener = jedna usluga (Cilium bierze
+#   najstarszy TCPRoute). Ruch L4 idzie przez eBPF Ciliuma, nie przez Envoy
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -48,3 +51,18 @@ spec:
                 operator: In
                 values:
                   - argocd
+                  - forgejo
+    - name: ssh
+      protocol: TCP
+      port: 22
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
+        namespaces:
+          from: Selector
+          selector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - forgejo

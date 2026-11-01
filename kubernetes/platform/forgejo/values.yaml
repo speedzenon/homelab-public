@@ -1,0 +1,120 @@
+# Forgejo (chart forgejo-helm 17.x) - JAWNE values, bez sekretow.
+# Jeden pod, baza SQLite na wolumenie, wejscie przez Gateway 'internal':
+# HTTPS (HTTPRoute z chartu) i SSH (TCPRoute v1 nizej, port 22 na VIP-ie Gatewaya).
+
+# Obraz rootless (domyslny w chartcie): proces jako uid 1000, wbudowany serwer SSH
+# na 2222 - bez roota i bez dodatkowych capabilities.
+image:
+  rootless: true
+
+# Pod Security 'restricted' na poziomie poda; dotyczy tez init containerow.
+podSecurityContext:
+  fsGroup: 1000
+  # chown calego wolumenu tylko gdy wlasciciel katalogu glownego sie nie zgadza -
+  # przy wielu repozytoriach rekurencyjny chown przy kazdym starcie trwa minutami
+  fsGroupChangePolicy: OnRootMismatch
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Zestaw z przykladu w values chartu, bez SYS_CHROOT (potrzebne tylko z cri-o;
+# Talos ma containerd, a 'restricted' i tak by go odrzucil). Zapis tylko do /data
+# (PVC) i /tmp (emptyDir) - chart ustawia GITEA_WORK_DIR, GITEA_CUSTOM, HOME
+# i app.ini pod /data. Gdyby pod padal z "read-only file system", zdjac
+# readOnlyRootFilesystem (nie jest wymagane przez 'restricted').
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+
+# Wlasny ServiceAccount bez tokenu API - Forgejo nie rozmawia z Kubernetesem.
+serviceAccount:
+  create: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# Repozytoria, baza SQLite, klucze hosta SSH i app.ini z kluczami tajnymi
+# (generowane raz przy pierwszym starcie) - wszystko na tym jednym wolumenie.
+# - iscsi-zfs-retain: usuniecie PVC zostawia PV i zvol (reczne sprzatanie)
+# - helm.sh/resource-policy: keep (domyslne w chartcie) = w ArgoCD Delete=false:
+#   PVC przezywa usuniecie Application; Prune=false: przezywa zmiane nazwy w values
+persistence:
+  claimName: forgejo-data
+  size: 10Gi
+  storageClass: iscsi-zfs-retain
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+
+# HTTPRoute z chartu. DOMAIN i ROOT_URL (https://...) chart wylicza z pierwszej
+# nazwy i terminate: true. timeouts.request 0s: Cilium bez tego zostawia Envoyowi
+# domyslny limit 15 s na cale zadanie - przerwalby clone/push duzego repo.
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: internal
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - git.int.dawidkraska.pl
+  matches:
+    timeouts:
+      request: 0s
+
+# SSH: TCPRoute v1 przez extraDeploy, bo szablon tcpRoute w chartcie uzywa
+# v1alpha2, ktorego CRD Gateway API v1.6 juz nie serwuja. Gateway -> Service
+# forgejo-ssh:22 -> pod:2222 (ruch L4 obsluguje eBPF Ciliuma, nie Envoy).
+# Nazwy = releaseName 'forgejo' z kubernetes/apps/forgejo.yaml.
+extraDeploy:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: TCPRoute
+    metadata:
+      name: forgejo-ssh
+    spec:
+      parentRefs:
+        - name: internal
+          namespace: gateway
+          sectionName: ssh
+      rules:
+        - backendRefs:
+            - name: forgejo-ssh
+              port: 22
+
+# Test helma (pod busybox:latest) - ArgoCD go nie uruchamia, a 'restricted' i tak
+# by go odrzucil.
+test:
+  enabled: false
+
+gitea:
+  # Login i haslo admina z Secretu forgejo-admin ('just forgejo-secret').
+  # keepUpdated: haslo z Secretu jest nadpisywane przy kazdym starcie poda - zrodlem
+  # prawdy jest admin.sops.yaml, nie UI. E-mail tylko formalnie (bez poczty).
+  admin:
+    existingSecret: forgejo-admin
+    email: admin@git.int.dawidkraska.pl
+    passwordMode: keepUpdated
+  config:
+    service:
+      DISABLE_REGISTRATION: true
+      # Bez logowania nic nie widac (takze repozytoriow publicznych)
+      REQUIRE_SIGNIN_VIEW: true
+      DEFAULT_KEEP_EMAIL_PRIVATE: true
+    repository:
+      DEFAULT_PRIVATE: private
+    # Sesje w bazie zamiast w pamieci: restart poda nie wylogowuje
+    session:
+      PROVIDER: db
+    openid:
+      ENABLE_OPENID_SIGNIN: false
+      ENABLE_OPENID_SIGNUP: false
+    mailer:
+      ENABLED: false

@@ -32,10 +32,23 @@ node:
 # przypisany do wezla - przy iSCSI mniej istotne niz przy topologii lokalnej,
 # ale spojne i bezpieczne (unika provisioningu wolumenow, ktore nie zostana uzyte).
 # allowVolumeExpansion: sterownik wspiera ControllerExpandVolume.
+# Dwie klasy roznia sie tylko reclaimPolicy:
+#  - iscsi-zfs:        Delete - usuniecie PVC kasuje PV i zvol (dane tymczasowe, testy)
+#  - iscsi-zfs-retain: Retain - po usunieciu PVC zostaja PV (Released) i zvol; dla danych,
+#                      ktorych nie da sie odtworzyc (Forgejo). Swiadome sprzatanie:
+#                      zmiana persistentVolumeReclaimPolicy PV na Delete - wtedy
+#                      sterownik sam usuwa zvol i target iSCSI
 storageClasses:
   - name: iscsi-zfs
     defaultClass: false
     reclaimPolicy: Delete
+    volumeBindingMode: WaitForFirstConsumer
+    allowVolumeExpansion: true
+    parameters:
+      fsType: ext4
+  - name: iscsi-zfs-retain
+    defaultClass: false
+    reclaimPolicy: Retain
     volumeBindingMode: WaitForFirstConsumer
     allowVolumeExpansion: true
     parameters:
