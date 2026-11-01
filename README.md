@@ -67,6 +67,8 @@ flowchart LR
 - **GitOps:** ArgoCD (app-of-apps, zarządza również samym sobą) + Renovate
 - **Storage:** ZFS na nodzie storage; dedykowana sieć storage (drugi NIC węzłów,
   selekcja interfejsów po adresach MAC)
+- **Backup:** VolSync + restic → Backblaze B2 (UE) — migawka ZFS per PVC, szyfrowanie
+  po stronie klastra, test odtworzenia co kwartał
 - **Secrets:** SOPS + age — pełne szyfrowanie adresacji i sekretów bootstrapu Talosa
 - **Jakość:** pre-commit (yamllint, gitleaks, shellcheck, markdownlint, Conventional
   Commits, `tofu fmt`, autorski hook blokujący plaintext RFC1918), CI (pre-commit, walidacja tytułu
@@ -89,12 +91,12 @@ flowchart LR
   (`docs/runbooks/forgejo.md`)
 - Storage: pule ZFS (`fast`, `data`) po burn-in dysków, nieroutowana sieć storage E2E,
   dynamiczne PVC przez democratic-csi (`zfs-generic-iscsi`) ze snapshotami ZFS per wolumen
+- Backup danych z klastra: co noc VolSync (migawka ZFS → restic) do Backblaze B2 w UE,
+  szyfrowany po stronie klastra, z retencją; sprawdzony testem odtworzenia z `git fsck`
+  (`docs/runbooks/backup.md`)
 
 ### W toku
 
-- Backup danych z klastra: VolSync (migawka ZFS → restic) do Backblaze B2 w UE, szyfrowany
-  po stronie klastra, z retencją w repo; zamknięcie po teście odtworzenia
-  (`docs/runbooks/backup.md`)
 - Greenfield firewall MikroTik — zero-trust między VLAN-ami (obserwacja logów przepływów)
 
 ### Roadmapa

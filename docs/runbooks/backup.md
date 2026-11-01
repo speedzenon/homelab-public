@@ -186,6 +186,13 @@ kubectl delete namespace restore-test       # PVC z klasą iscsi-zfs znika razem
 Starszy stan zamiast najnowszego: w ReplicationDestination `previous: N` (N-ty snapshot
 wstecz) albo `restoreAsOf: "2026-11-01T03:00:00+01:00"`.
 
+Przeprowadzone testy (następny: luty 2027):
+
+| Data | Wynik |
+|---|---|
+| 01.11.2026 | błąd: puste obiekty i ref w świeżo wypchniętym repo (git bez fsync) → `core.fsync: all` (#79) |
+| 01.11.2026 | OK: push i migawka ~10 s później, `git fsck` bez błędów, baza i `app.ini` na miejscu |
+
 ## Odbudowa po awarii (z danymi)
 
 Zasada: aplikacja nie może zainicjować pustego wolumenu, zanim dane wrócą, a backup
