@@ -161,7 +161,10 @@ done:
     done
 
 # --- Bootstrap klastra (Day-1 / odbudowa), w tej kolejnosci:
-#     gateway-crds -> cilium-install -> csi-secret -> ovh-secret -> forgejo-secret -> argocd-install
+#     gateway-crds -> cilium-install -> csi-secret -> ovh-secret -> forgejo-secret
+#     -> volsync-secret forgejo forgejo-data -> argocd-install
+# Przy odbudowie Z DANYMI volsync-secret dopiero po odtworzeniu PVC (docs/runbooks/backup.md):
+# bez sekretu backup nie ruszy, a z nim pierwszy sync skopiowalby jeszcze pusty wolumen.
 # Wersje chartow i CRD = targetRevision z kubernetes/apps/ - helm i kubectl instaluja
 # dokladnie to, co potem adoptuje ArgoCD.
 
@@ -208,6 +211,23 @@ forgejo-secret:
     sops exec-file --no-fifo --output-type dotenv kubernetes/platform/forgejo/admin.sops.yaml \
         'kubectl create secret generic forgejo-admin --namespace forgejo --from-env-file={} --dry-run=client -o yaml' | \
         kubectl apply --server-side --force-conflicts -f -
+
+# Wzorzec jak ovh-secret, ale 'sed -i' na tymczasowym pliku sops (0600, sops sprzata go
+# po komendzie) zamienia RESTIC_REPOSITORY_BASE na RESTIC_REPOSITORY=<BASE>/<repo> -
+# osobne repozytorium restica na kazdy PVC. Gdy odszyfrowanie albo sed padnie, kubectl
+# sie nie uruchomi, wiec do apply nie trafi nic.
+# repo domyslnie <ns>/<pvc>; inne przy tescie odtworzenia w osobnym namespace, np.
+#   just volsync-secret restore-test forgejo-data forgejo/forgejo-data
+# Secret <pvc>-restic (dostep do repozytorium restica w B2) dla VolSync (poza GitOps)
+volsync-secret ns pvc repo=(ns + "/" + pvc):
+    kubectl create namespace {{ns}} --dry-run=client -o yaml | kubectl apply -f -
+    sops exec-file --no-fifo --output-type dotenv kubernetes/platform/volsync/restic.sops.yaml \
+        'sed -i "s|^RESTIC_REPOSITORY_BASE=\(.*\)|RESTIC_REPOSITORY=\1/{{repo}}|" {} && kubectl create secret generic {{pvc}}-restic --namespace {{ns}} --from-env-file={} --dry-run=client -o yaml' | \
+        kubectl apply --server-side --force-conflicts -f -
+
+# Stan backupow VolSync: ostatni sync, czas trwania, nastepny, wynik movera
+backup-status:
+    kubectl get replicationsources.volsync.backube -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,DURATION:.status.lastSyncDuration,NEXT_SYNC:.status.nextSyncTime,RESULT:.status.latestMoverStatus.result'
 
 argocd-install: _versions
     helm repo add argo https://argoproj.github.io/argo-helm --force-update

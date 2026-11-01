@@ -1,0 +1,7 @@
+# VolSync 0.17.0 - JAWNE values (bez sekretow). Domyslne values chartu sa
+# zgodne z Pod Security 'restricted', wiec tu tylko to, co warto miec na widoku.
+
+# CRD ReplicationSource/ReplicationDestination instaluje chart. UWAGA: wylaczenie
+# = prune CRD przez Argo = skasowanie WSZYSTKICH ReplicationSource w klastrze
+# (repozytoria w B2 zostaja, ale backupy przestaja sie robic).
+manageCRDs: true
