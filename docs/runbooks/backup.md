@@ -25,8 +25,26 @@ restic szyfruje dane po stronie klastra, zanim cokolwiek wyjdzie do chmury.
    (`volsync-src-<nazwa>-cache`, metadane repozytorium — przyspiesza kolejne backupy).
 
 Pierwszy backup startuje od razu po utworzeniu ReplicationSource, kolejne wg harmonogramu.
-Migawka jest spójna jak po zaniku zasilania: aplikacja działa w trakcie, a SQLite i git
-są na to odporne. Bazy z własnymi mechanizmami (Postgres) dostaną swój backup (CNPG + Barman).
+
+### Spójność migawki
+
+Migawkę robi ZFS na nodzie storage, na poziomie zvola. Widzi tylko to, co węzeł Kubernetesa
+zdążył już zapisać przez iSCSI — **nie widzi jego page cache**. Efekt jest taki jak po nagłym
+zaniku zasilania węzła. Aplikacja przetrwa to bez strat tylko wtedy, gdy sama robi fsync
+tego, co musi przeżyć:
+
+- SQLite robi fsync przy każdym commicie, więc baza jest spójna;
+- git **domyślnie nie** robi fsync luźnych obiektów ani refów (tylko paczek). Mały push
+  (< 100 obiektów) trafia jako luźne obiekty, więc migawka zrobiona do ~30 s po nim ma puste
+  pliki obiektów i pusty ref (ext4 z opóźnioną alokacją). Wykrył to pierwszy test odtworzenia
+  (01.11.2026); naprawa: `git.config: core.fsync: all` w values Forgejo — git utrwala każdy
+  plik, zanim nada mu docelową nazwę, więc repo jest w stanie sprzed pusha albo po nim.
+  Ta sama poprawka chroni świeży push przy awarii zasilania węzła;
+- pliki pisane bez fsync (załączniki, awatary) są w migawce pewne po ~30 s bezczynności
+  (zapis z page cache), stąd harmonogram w nocy.
+
+Przy nowej aplikacji sprawdzić, czy robi fsync ważnych danych. Bazy z własnymi mechanizmami
+(Postgres) dostaną własny backup (CNPG + Barman), nie migawkę wolumenu.
 
 ## Konfiguracja B2 (jednorazowo)
 
@@ -71,6 +89,10 @@ po usunięciu Joba). W trakcie backupu: `kubectl -n forgejo logs -f job/volsync-
 
 Backup bez sprawdzonego odtworzenia to tylko nadzieja. Test przy wdrożeniu (bramka fazy 5),
 potem co kwartał. Odtwarzamy do osobnego namespace'u — produkcja zostaje nietknięta.
+Test ma sens tylko z danymi: co najmniej jedno repo z commitami (stałe repo testowe
+`backup-test`). Najsurowsza wersja: push i natychmiast wymuszony backup
+(`kubectl -n forgejo delete replicationsource forgejo-data` — ArgoCD odtworzy obiekt, a nowy
+ReplicationSource robi pierwszy backup od razu) — sprawdza też fsync gita.
 
 ```bash
 kubectl create namespace restore-test
@@ -194,5 +216,6 @@ wypchnąłby dzisiejszy dobry).
 1. Manifest w `kubernetes/infrastructure/backup/` na wzór `forgejo-data.yaml`:
    `sourcePVC`, `repository: <pvc>-restic`, `moverSecurityContext` z uid/gid właściciela
    plików aplikacji, klasy tymczasowe zawsze `iscsi-zfs`.
+   Sprawdzić, czy aplikacja robi fsync danych, które muszą przeżyć (patrz „Spójność migawki”).
 2. `just volsync-secret <ns> <pvc>` przed merge'em.
 3. Po pierwszym backupie — test odtworzenia jak wyżej.

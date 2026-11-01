@@ -4,8 +4,12 @@
 #
 # - pierwszy backup startuje od razu po utworzeniu obiektu (stan poczatkowy
 #   VolSync), kolejne wg harmonogramu (cron w UTC: 02:30 = 03:30/04:30 w Polsce)
-# - copyMethod Snapshot: migawka ZFS jest atomowa (spojnosc jak po zaniku
-#   zasilania - SQLite i git to znosza), Forgejo dziala w trakcie
+# - copyMethod Snapshot: migawka ZFS jest atomowa, ale ma spojnosc jak po zaniku
+#   zasilania - zawiera tylko to, co wezel zdazyl zapisac na zvol (bez jego page
+#   cache). SQLite robi fsync przy kazdym commicie; git dopiero z core.fsync=all
+#   (values Forgejo) - bez tego swiezy push jest w migawce pustymi plikami.
+#   Pliki pisane bez fsync (zalaczniki, awatary) w migawce sa pewne po ~30 s
+#   bezczynnosci - stad harmonogram w nocy. Forgejo dziala w trakcie
 # - klasy dla obiektow tymczasowych JAWNIE iscsi-zfs (Delete): domyslnie VolSync
 #   bierze klase zrodla, a przy iscsi-zfs-retain kazda noc zostawialaby osierocony
 #   PV i zvol z kopia tymczasowa

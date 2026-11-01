@@ -70,8 +70,10 @@ kubectl -n forgejo rollout restart deployment/forgejo
   EOF
   ```
 
-  Snapshot ZFS jest atomowy (spójny jak po zaniku zasilania — SQLite to znosi).
-  To kopia na tym samym nodzie storage, nie backup.
+  Snapshot ZFS jest atomowy, ze spójnością jak po zaniku zasilania: SQLite robi fsync
+  przy commicie, git dzięki `core.fsync: all` w values (domyślnie git nie robi fsync luźnych
+  obiektów ani refów — świeży push byłby w migawce pustymi plikami). Szczegóły:
+  `docs/runbooks/backup.md`, „Spójność migawki”. To kopia na tym samym nodzie storage, nie backup.
 
 ## Ochrona danych
 
