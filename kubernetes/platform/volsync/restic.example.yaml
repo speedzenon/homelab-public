@@ -1,0 +1,20 @@
+# Wzor dla restic.sops.yaml - dostep do repozytoriow restica w Backblaze B2.
+# Prawdziwy plik tworzy sops (szyfruje przy zapisie wg .sops.yaml):
+#   sops kubernetes/platform/volsync/restic.sops.yaml
+# Plaskie klucze: 'just volsync-secret <ns> <pvc>' robi z nich Secret <pvc>-restic,
+# zamieniajac RESTIC_REPOSITORY_BASE na RESTIC_REPOSITORY = BASE/<ns>/<pvc>
+# (osobne repozytorium restica na kazdy PVC - zalecenie VolSync).
+# - RESTIC_REPOSITORY_BASE: s3: + endpoint S3 B2 + nazwa bucketu, bez koncowego /
+#   (restic zaleca dla B2 API S3 zamiast natywnego backendu b2:)
+# - RESTIC_PASSWORD: klucz szyfrowania WSZYSTKICH backupow klastra. Kopia MUSI byc
+#   poza labem (menedzer hasel / papier) - bez niej backup jest bezuzyteczny.
+#   Np.: openssl rand -base64 48 | tr -d '\n'
+# - AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY: keyID / applicationKey klucza B2
+#   ograniczonego do jednego bucketu (Read and Write)
+# - AWS_DEFAULT_REGION: region z endpointu (restic nie musi go wtedy odpytywac)
+# Wartosci bez cudzyslowow i znakow nowej linii (format KLUCZ=wartosc).
+RESTIC_REPOSITORY_BASE: "s3:https://s3.eu-central-003.backblazeb2.com/<bucket>"
+RESTIC_PASSWORD: "<haslo restica>"
+AWS_ACCESS_KEY_ID: "<keyID z B2>"
+AWS_SECRET_ACCESS_KEY: "<applicationKey z B2>"
+AWS_DEFAULT_REGION: eu-central-003

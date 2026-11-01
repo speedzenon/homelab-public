@@ -79,6 +79,9 @@ kubectl -n forgejo rollout restart deployment/forgejo
   `Delete=false`: PVC przeżywa usunięcie Application.
 - `Prune=false` — PVC przeżywa zmianę nazwy lub usunięcie z values.
 - Klasa `iscsi-zfs-retain` — po usunięciu PVC zostaje PV (`Released`) i zvol.
+- Backup poza nodem storage: co noc VolSync → restic → Backblaze B2
+  (`kubernetes/infrastructure/backup/forgejo-data.yaml`, `docs/runbooks/backup.md`
+  — tam też test odtworzenia i odbudowa po awarii).
 
 Ponowne podpięcie zachowanego PV do nowego PVC: zdjąć stare powiązanie
 (`kubectl patch pv <pv> --type json -p '[{"op":"remove","path":"/spec/claimRef"}]'`)
@@ -87,6 +90,5 @@ i wskazać PV w `persistence.volumeName`. Świadome skasowanie danych: zmienić
 
 ## Czego jeszcze nie ma
 
-- Backupu poza nodem storage (faza 5: snapshoty + restic → B2, test odtworzenia).
 - Runnera Forgejo Actions (faza 6).
 - SSO — logowanie lokalnymi kontami do czasu Authentika.

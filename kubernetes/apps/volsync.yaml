@@ -1,0 +1,46 @@
+# VolSync (Backube): operator kopii zapasowych wolumenow. Dla kazdego
+# ReplicationSource robi wg harmonogramu migawke PVC (VolumeSnapshot przez
+# democratic-csi), montuje ja tymczasowo i wysyla resticiem do Backblaze B2.
+# Same ReplicationSource-y sa w kubernetes/infrastructure/backup/ (Application
+# 'backup'), sekrety repozytoriow tworzy 'just volsync-secret'.
+#
+# Dlaczego nie Velero: jego glowna przewaga to backup obiektow Kubernetesa, a te
+# sa w gicie (GitOps). Kopii potrzebuja tylko dane na wolumenach.
+#
+# CRD z chartu (~440 KB najwiekszy) -> ServerSideApply (limit adnotacji 256 KB).
+# Wymaga CRD snapshot.storage.k8s.io (snapshot-controller.yaml).
+# Namespace z Pod Security 'restricted': kontroler spelnia go z domyslnych values
+# (uid 65534, seccomp RuntimeDefault, drop ALL, rootfs tylko do odczytu).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: volsync
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://backube.github.io/helm-charts/
+      chart: volsync
+      targetRevision: 0.17.0
+      helm:
+        releaseName: volsync
+        valueFiles:
+          - $values/kubernetes/platform/volsync/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: volsync-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+        pod-security.kubernetes.io/audit: restricted

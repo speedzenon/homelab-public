@@ -1,0 +1,42 @@
+# Backup PVC forgejo-data (repozytoria, baza SQLite, klucze hosta SSH, app.ini)
+# do repozytorium restica <RESTIC_REPOSITORY_BASE>/forgejo/forgejo-data w B2.
+# Sekret: just volsync-secret forgejo forgejo-data
+#
+# - pierwszy backup startuje od razu po utworzeniu obiektu (stan poczatkowy
+#   VolSync), kolejne wg harmonogramu (cron w UTC: 02:30 = 03:30/04:30 w Polsce)
+# - copyMethod Snapshot: migawka ZFS jest atomowa (spojnosc jak po zaniku
+#   zasilania - SQLite i git to znosza), Forgejo dziala w trakcie
+# - klasy dla obiektow tymczasowych JAWNIE iscsi-zfs (Delete): domyslnie VolSync
+#   bierze klase zrodla, a przy iscsi-zfs-retain kazda noc zostawialaby osierocony
+#   PV i zvol z kopia tymczasowa
+# - mover jako uid 1000 (wlasciciel plikow Forgejo) bez dodatkowych uprawnien -
+#   zgodnie z Pod Security 'restricted' namespace'u forgejo
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: forgejo-data
+  namespace: forgejo
+spec:
+  sourcePVC: forgejo-data
+  trigger:
+    schedule: "30 2 * * *"
+  restic:
+    repository: forgejo-data-restic
+    copyMethod: Snapshot
+    volumeSnapshotClassName: iscsi-zfs-snap
+    storageClassName: iscsi-zfs
+    cacheStorageClassName: iscsi-zfs
+    cacheCapacity: 1Gi
+    pruneIntervalDays: 7
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 12
+    moverSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+      seccompProfile:
+        type: RuntimeDefault

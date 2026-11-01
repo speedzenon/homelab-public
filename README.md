@@ -92,6 +92,9 @@ flowchart LR
 
 ### W toku
 
+- Backup danych z klastra: VolSync (migawka ZFS → restic) do Backblaze B2 w UE, szyfrowany
+  po stronie klastra, z retencją w repo; zamknięcie po teście odtworzenia
+  (`docs/runbooks/backup.md`)
 - Greenfield firewall MikroTik — zero-trust między VLAN-ami (obserwacja logów przepływów)
 
 ### Roadmapa
@@ -118,8 +121,8 @@ homelab/
 ├── kubernetes/            Źródło prawdy dla ArgoCD
 │   ├── bootstrap/         Values instalacji Day-1 (Cilium, ArgoCD)
 │   ├── apps/              Application-y (app-of-apps)
-│   ├── infrastructure/    Zasoby klastrowe (pule LB, Gateway, certyfikat, ClusterIssuery)
-│   ├── platform/          Values aplikacji (cert-manager, democratic-csi, Forgejo) + wzory sekretów
+│   ├── infrastructure/    Zasoby klastrowe (pule LB, Gateway, certyfikat, ClusterIssuery, polityka backupu)
+│   ├── platform/          Values aplikacji (cert-manager, democratic-csi, Forgejo, VolSync) + wzory sekretów
 │   └── policies/          Placeholder pod roadmapę
 ├── scripts/               Bootstrap SDN i kontenerów LXC, audyt firewalla PVE, hooki
 ├── justfile               Cały workflow: git, tofu, talos, bootstrap komponentów
