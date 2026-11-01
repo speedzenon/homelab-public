@@ -118,3 +118,14 @@ gitea:
       ENABLE_OPENID_SIGNUP: false
     mailer:
       ENABLED: false
+    # Opcje git dla wszystkich procesow git uruchamianych przez Forgejo (Forgejo
+    # zapisuje je w swoim .gitconfig: /data/home/.gitconfig). Domyslnie git robi
+    # fsync tylko paczek (pack, pack-metadata, commit-graph) - luzne obiekty i refy
+    # zostaja w page cache wezla. Maly push (< 100 obiektow) laduje jako luzne obiekty,
+    # wiec po nieczystym wylaczeniu tuz po pushu, a takze w migawce ZFS do backupu
+    # (zvol widzi tylko to, co wezel juz zapisal) repo ma puste pliki obiektow
+    # i pusty ref. 'all': git robi fsync kazdego pliku, zanim nada mu docelowa
+    # nazwe - repo jest wtedy w stanie sprzed pusha albo po nim, bez pustych plikow.
+    # Wykryte testem odtworzenia (docs/runbooks/backup.md, "Spojnosc migawki").
+    git.config:
+      core.fsync: all
