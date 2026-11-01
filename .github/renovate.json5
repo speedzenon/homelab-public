@@ -64,6 +64,18 @@
       ],
     },
     {
+      // Chart z rejestru OCI: depName = repoURL/chart, datasource docker.
+      // Minor/patch w obrębie 17.x = poprawki Forgejo 15 LTS — zwykłe PR-y.
+      description: 'Forgejo — major chartu tylko po akceptacji w Dependency Dashboard (linia LTS)',
+      matchManagers: ['argocd'],
+      matchDepNames: ['code.forgejo.org/forgejo-helm/forgejo'],
+      matchUpdateTypes: ['major'],
+      dependencyDashboardApproval: true,
+      prBodyNotes: [
+        '⚠️ Sprawdź w README chartu (sekcja „Upgrading”), którą wersję Forgejo instaluje ten major. Trzymamy się linii LTS: 15 LTS do 15.07.2027, potem skok na 19 LTS. Przed upgrade’em kopia wolumenu `forgejo-data` (VolumeSnapshot) — migracje bazy są jednokierunkowe.',
+      ],
+    },
+    {
       description: 'Auto-merge pinów SHA dla GitHub Actions (niskie ryzyko)',
       matchManagers: ['github-actions'],
       matchUpdateTypes: ['digest', 'pin'],

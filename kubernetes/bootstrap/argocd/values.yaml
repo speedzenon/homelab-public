@@ -25,3 +25,14 @@ server:
         sectionName: https
     hostnames:
       - *argocd_host
+    # Lista zastepuje domyslna z chartu, wiec matches trzeba powtorzyc.
+    # timeouts.request 0s: bez tego Cilium zostawia Envoyowi domyslne 15 s na cale
+    # zadanie i ucina strumienie - odswiezanie drzewa aplikacji w UI (SSE), logi
+    # z 'follow', 'argocd app wait'
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /
+        timeouts:
+          request: 0s

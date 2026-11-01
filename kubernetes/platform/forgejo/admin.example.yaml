@@ -1,0 +1,10 @@
+# Wzor dla admin.sops.yaml - konto administratora Forgejo. Prawdziwy plik tworzy
+# sops (szyfruje przy zapisie wg .sops.yaml):
+#   sops kubernetes/platform/forgejo/admin.sops.yaml
+# Plaskie klucze: 'just forgejo-secret' robi z nich klucze Secretu forgejo-admin.
+# - username: NIE 'admin' (nazwa zastrzezona w Forgejo); konto do administracji,
+#   do codziennej pracy osobny uzytkownik
+# - password: bez cudzyslowow i znakow nowej linii (format KLUCZ=wartosc), np.
+#   openssl rand -base64 33 | tr -d '\n/+='
+username: forgejo-admin
+password: zmien-mnie

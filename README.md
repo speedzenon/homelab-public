@@ -84,11 +84,14 @@ flowchart LR
 - Wejście HTTPS: Gateway API na stałym VIP-ie z wydzielonej puli, wildcard Let's Encrypt
   (DNS-01 przez OVH), rekord DNS na MikroTiku z OpenTofu sprawdzany względem manifestu
   Gatewaya; ArgoCD pod własną nazwą zamiast port-forwardu
-- Storage: pule ZFS (`fast`, `data`) po burn-in dysków, nieroutowana sieć storage E2E
+- Forgejo (linia LTS) na repozytoria domowe: HTTPS i SSH przez wspólny Gateway, Pod Security
+  `restricted`, SQLite na zvolu iSCSI z polityką Retain, konto admina z SOPS
+  (`docs/runbooks/forgejo.md`)
+- Storage: pule ZFS (`fast`, `data`) po burn-in dysków, nieroutowana sieć storage E2E,
+  dynamiczne PVC przez democratic-csi (`zfs-generic-iscsi`) ze snapshotami ZFS per wolumen
 
 ### W toku
 
-- democratic-csi (`zfs-generic-iscsi`) — dynamiczne PVC ze snapshotami ZFS per wolumen
 - Greenfield firewall MikroTik — zero-trust między VLAN-ami (obserwacja logów przepływów)
 
 ### Roadmapa
@@ -115,8 +118,9 @@ homelab/
 ├── kubernetes/            Źródło prawdy dla ArgoCD
 │   ├── bootstrap/         Values instalacji Day-1 (Cilium, ArgoCD)
 │   ├── apps/              Application-y (app-of-apps)
-│   ├── infrastructure/    Zasoby klastrowe (pula LB Cilium, polityka L2)
-│   └── platform/ policies/  Placeholdery pod roadmapę
+│   ├── infrastructure/    Zasoby klastrowe (pule LB, Gateway, certyfikat, ClusterIssuery)
+│   ├── platform/          Values aplikacji (cert-manager, democratic-csi, Forgejo) + wzory sekretów
+│   └── policies/          Placeholder pod roadmapę
 ├── scripts/               Bootstrap SDN i kontenerów LXC, audyt firewalla PVE, hooki
 ├── justfile               Cały workflow: git, tofu, talos, bootstrap komponentów
 └── .github/workflows/     CI + security pipeline

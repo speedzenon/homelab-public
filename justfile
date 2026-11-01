@@ -161,7 +161,7 @@ done:
     done
 
 # --- Bootstrap klastra (Day-1 / odbudowa), w tej kolejnosci:
-#     gateway-crds -> cilium-install -> csi-secret -> ovh-secret -> argocd-install
+#     gateway-crds -> cilium-install -> csi-secret -> ovh-secret -> forgejo-secret -> argocd-install
 # Wersje chartow i CRD = targetRevision z kubernetes/apps/ - helm i kubectl instaluja
 # dokladnie to, co potem adoptuje ArgoCD.
 
@@ -199,6 +199,16 @@ ovh-secret:
         'kubectl create secret generic ovh-credentials --namespace cert-manager --from-env-file={} --dry-run=client -o yaml' | \
         kubectl apply --server-side --force-conflicts -f -
 
+# Ten sam wzorzec co ovh-secret (klucze username/password). Chart czyta Secret przez
+# gitea.admin.existingSecret, a przy passwordMode keepUpdated kazdy start poda ustawia
+# haslo z Secretu - rotacja: sops edit, ten przepis, restart Deploymentu forgejo.
+# Secret z kontem admina Forgejo (poza GitOps)
+forgejo-secret:
+    kubectl create namespace forgejo --dry-run=client -o yaml | kubectl apply -f -
+    sops exec-file --no-fifo --output-type dotenv kubernetes/platform/forgejo/admin.sops.yaml \
+        'kubectl create secret generic forgejo-admin --namespace forgejo --from-env-file={} --dry-run=client -o yaml' | \
+        kubectl apply --server-side --force-conflicts -f -
+
 argocd-install: _versions
     helm repo add argo https://argoproj.github.io/argo-helm --force-update
     helm upgrade --install argocd argo/argo-cd \
@@ -207,6 +217,8 @@ argocd-install: _versions
         --values kubernetes/bootstrap/argocd/values.yaml
     kubectl apply -f kubernetes/bootstrap/argocd/root-app.yaml
 
+# Secret istnieje tylko do pierwszej zmiany hasla (potem do usuniecia - zalecenie ArgoCD).
+# Day-1: pierwsze haslo admina ArgoCD
 argocd-password:
     @kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
 

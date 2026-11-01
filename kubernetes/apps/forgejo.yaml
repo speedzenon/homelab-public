@@ -1,0 +1,45 @@
+# Forgejo: wlasny serwer Git na repozytoria domowe (git.int.dawidkraska.pl).
+# Platforma i samo Forgejo zostaja w tym repo na GitHubie - nic potrzebnego do
+# odbudowy klastra nie zyje wylacznie w Forgejo.
+#
+# Chart z rejestru OCI Forgejo. ArgoCD rozpoznaje OCI po repoURL BEZ schematu
+# (bez oci://) i nie potrzebuje do tego Secretu repozytorium; Renovate tak samo
+# (depName code.forgejo.org/forgejo-helm/forgejo, datasource docker).
+# Linia LTS: chart 17.x instaluje Forgejo 15 LTS (wsparcie do 15.07.2027). Major
+# chartu wymaga akceptacji w Dependency Dashboard (.github/renovate.json5).
+#
+# Namespace z Pod Security 'restricted' (utwardzenie podow w values). Secret
+# z adminem tworzy 'just forgejo-secret' (poza GitOps, z admin.sops.yaml).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forgejo
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: code.forgejo.org/forgejo-helm
+      chart: forgejo
+      targetRevision: 17.3.2
+      helm:
+        releaseName: forgejo
+        valueFiles:
+          - $values/kubernetes/platform/forgejo/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forgejo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+        pod-security.kubernetes.io/audit: restricted
