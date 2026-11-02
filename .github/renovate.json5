@@ -76,6 +76,14 @@
       ],
     },
     {
+      // Renovate wydaje nowe wersje kilka razy dziennie, a chart idzie za każdą -
+      // bez tej reguły codziennie nowy PR. Raz w tygodniu wystarczy.
+      description: 'Chart Renovate (dla repozytoriów w Forgejo) — raz w tygodniu',
+      matchManagers: ['argocd'],
+      matchDepNames: ['ghcr.io/renovatebot/charts/renovate'],
+      schedule: ['* 0-5 * * 1'],
+    },
+    {
       description: 'Auto-merge pinów SHA dla GitHub Actions (niskie ryzyko)',
       matchManagers: ['github-actions'],
       matchUpdateTypes: ['digest', 'pin'],

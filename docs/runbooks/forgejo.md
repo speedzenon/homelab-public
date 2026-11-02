@@ -11,6 +11,7 @@ na GitHubie — nic potrzebnego do odbudowy klastra nie jest wyłącznie w Forge
 | Values | `kubernetes/platform/forgejo/values.yaml` |
 | Konto admina | `kubernetes/platform/forgejo/admin.sops.yaml` → `just forgejo-secret` → Secret `forgejo-admin` |
 | Dane | PVC `forgejo-data` (klasa `iscsi-zfs-retain`): repozytoria, baza SQLite, klucze hosta SSH, `app.ini` |
+| Renovate | konto bota `renovate`, CronJob w ns `renovate` — `docs/runbooks/renovate.md` |
 
 `app.ini` na wolumenie zawiera klucze generowane raz przy pierwszym starcie
 (`SECRET_KEY`, `JWT_SECRET` i in.). Utrata wolumenu bez kopii to nie tylko repozytoria:

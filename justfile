@@ -162,7 +162,8 @@ done:
 
 # --- Bootstrap klastra (Day-1 / odbudowa), w tej kolejnosci:
 #     gateway-crds -> cilium-install -> csi-secret -> ovh-secret -> forgejo-secret
-#     -> volsync-secret forgejo forgejo-data -> argocd-install
+#     -> volsync-secret forgejo forgejo-data -> renovate-secret -> argocd-install
+# Po starcie Forgejo (a przy odbudowie z danymi - po odtworzeniu PVC): renovate-bot.
 # Przy odbudowie Z DANYMI volsync-secret dopiero po odtworzeniu PVC (docs/runbooks/backup.md):
 # bez sekretu backup nie ruszy, a z nim pierwszy sync skopiowalby jeszcze pusty wolumen.
 # Wersje chartow i CRD = targetRevision z kubernetes/apps/ - helm i kubectl instaluja
@@ -228,6 +229,59 @@ volsync-secret ns pvc repo=(ns + "/" + pvc):
 # Stan backupow VolSync: ostatni sync, czas trwania, nastepny, wynik movera
 backup-status:
     kubectl get replicationsources.volsync.backube -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,DURATION:.status.lastSyncDuration,NEXT_SYNC:.status.nextSyncTime,RESULT:.status.latestMoverStatus.result'
+
+# Konto 'restricted': widzi tylko repozytoria, do ktorych dodasz je jako wspolpracownika
+# (Write). Haslo losowe i nieuzywane - bot pracuje wylacznie tokenem. Token idzie
+# z kubectl prosto do Secretu renovate-forgejo-token: nie ma go na ekranie, w argumentach
+# procesow ani w gicie - da sie go zawsze wygenerowac od nowa (tez po odbudowie klastra,
+# gdy Forgejo juz dziala). Istniejacego Secretu nie rusza; 'just renovate-bot rotate'
+# = nowy token (nazwa z data; stary usun - docs/runbooks/renovate.md).
+# Forgejo: konto bota renovate i Secret z jego tokenem (rotate = nowy token)
+renovate-bot rotate="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [[ -z "{{rotate}}" || "{{rotate}}" == rotate ]] || { echo "uzycie: just renovate-bot [rotate]"; exit 1; }
+    fj() { kubectl -n forgejo exec deploy/forgejo -c forgejo -- forgejo "$@"; }
+    if fj admin user list | awk 'NR > 1 {print $2}' | grep -qx renovate; then
+        echo "konto renovate juz istnieje"
+    else
+        fj admin user create --username renovate --fullname "Renovate Bot" \
+            --email renovate@git.int.dawidkraska.pl --restricted \
+            --random-password --random-password-length 32 --must-change-password=false >/dev/null
+        echo "utworzono konto renovate"
+    fi
+    if kubectl -n renovate get secret renovate-forgejo-token >/dev/null 2>&1 && [[ "{{rotate}}" != rotate ]]; then
+        echo "Secret renovate-forgejo-token juz jest - bez zmian (nowy token: just renovate-bot rotate)"
+        exit 0
+    fi
+    name="renovate-k8s-$(date +%Y%m%d-%H%M%S)"
+    tok=$(fj admin user generate-access-token --username renovate --token-name "$name" --raw \
+        --scopes write:repository,read:user,write:issue,read:organization | awk 'NF {t = $0} END {print t}')
+    [[ $tok =~ ^[[:alnum:]_-]{20,}$ ]] || { echo "BLAD: generate-access-token nie zwrocil tokenu"; exit 1; }
+    kubectl create namespace renovate --dry-run=client -o yaml | kubectl apply -f -
+    printf '%s' "$tok" | kubectl create secret generic renovate-forgejo-token --namespace renovate \
+        --from-file=RENOVATE_TOKEN=/dev/stdin --dry-run=client -o yaml | \
+        kubectl apply --server-side --force-conflicts -f -
+    echo "token $name w Secrecie renovate/renovate-forgejo-token"
+
+# Ten sam wzorzec co forgejo-secret (klucz RENOVATE_GITHUB_COM_TOKEN). Chart podaje
+# Secret jako zmienne srodowiskowe (existingSecret w values).
+# Secret z tokenem GitHuba dla Renovate (poza GitOps)
+renovate-secret:
+    kubectl create namespace renovate --dry-run=client -o yaml | kubectl apply -f -
+    sops exec-file --no-fifo --output-type dotenv kubernetes/platform/renovate/env.sops.yaml \
+        'kubectl create secret generic renovate-env --namespace renovate --from-env-file={} --dry-run=client -o yaml' | \
+        kubectl apply --server-side --force-conflicts -f -
+
+# Job z szablonu CronJoba; pierwsze uruchomienie na wezle pobiera obraz (~1 GB).
+# Renovate: przebieg teraz, poza harmonogramem, z logami na zywo
+renovate-run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    job="renovate-manual-$(date +%Y%m%d-%H%M%S)"
+    kubectl -n renovate create job --from=cronjob/renovate "$job"
+    kubectl -n renovate wait --for=condition=Ready pod -l job-name="$job" --timeout=600s
+    kubectl -n renovate logs -f "job/$job"
 
 argocd-install: _versions
     helm repo add argo https://argoproj.github.io/argo-helm --force-update
