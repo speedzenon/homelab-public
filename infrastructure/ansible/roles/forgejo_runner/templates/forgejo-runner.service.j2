@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Forgejo Runner (Forgejo Actions)
+Documentation=https://forgejo.org/docs/latest/admin/actions/
+Wants=network-online.target user@{{ forgejo_runner_uid }}.service
+After=network-online.target user@{{ forgejo_runner_uid }}.service
+
+[Service]
+Type=simple
+User={{ forgejo_runner_user }}
+Group={{ forgejo_runner_user }}
+WorkingDirectory={{ forgejo_runner_home }}
+# API rootless podmana tego uzytkownika (zgodne z API Dockera) - przez nie runner
+# tworzy kontenery jobow. Gniazdo uruchamia systemd uzytkownika (lingering).
+Environment=DOCKER_HOST=unix://{{ forgejo_runner_podman_socket }}
+Environment=XDG_RUNTIME_DIR=/run/user/{{ forgejo_runner_uid }}
+ExecStart=/usr/local/bin/forgejo-runner daemon --config {{ forgejo_runner_config_dir }}/config.yml
+Restart=on-failure
+RestartSec=10s
+# Utwardzenie: /usr, /boot i /etc tylko do odczytu, prywatny /tmp, bez eskalacji uprawnien
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+---
+- name: Przeladowanie systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart forgejo-runner
+  ansible.builtin.systemd:
+    name: forgejo-runner
+    state: restarted
+    daemon_reload: true

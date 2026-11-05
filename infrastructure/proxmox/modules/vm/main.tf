@@ -12,7 +12,16 @@ resource "proxmox_virtual_environment_vm" "this" {
   on_boot         = var.on_boot
   stop_on_destroy = true
 
-  agent { enabled = true }
+  agent {
+    enabled = true
+    # Blok tylko przy wylaczonym czekaniu - VM-ki Talosa bez zmian w planie
+    dynamic "wait_for_ip" {
+      for_each = var.agent_wait_for_ip ? [] : [1]
+      content {
+        disabled = true
+      }
+    }
+  }
 
   cpu {
     cores = var.cores
@@ -53,6 +62,19 @@ resource "proxmox_virtual_environment_vm" "this" {
         gateway = var.gateway
       }
     }
+    dynamic "dns" {
+      for_each = length(var.dns_servers) > 0 ? [1] : []
+      content {
+        servers = var.dns_servers
+      }
+    }
+    dynamic "user_account" {
+      for_each = var.user_account == null ? [] : [var.user_account]
+      content {
+        username = user_account.value.username
+        keys     = user_account.value.keys
+      }
+    }
   }
 
   # MAC eth0 przypiety (gdy podany): Talos wybiera interfejs po hardwareAddr,
@@ -62,6 +84,7 @@ resource "proxmox_virtual_environment_vm" "this" {
     bridge      = "vmbr0"
     vlan_id     = var.vlan_id
     mac_address = var.mac_address == null ? null : upper(var.mac_address)
+    firewall    = var.firewall
   }
 
   dynamic "network_device" {
@@ -80,6 +103,8 @@ resource "proxmox_virtual_environment_vm" "this" {
     # wiec nowa wersja Talosa w talos/versions.yaml odtworzylaby wszystkie
     # wezly (utrata etcd). Upgrade idzie in-place: 'just talos-upgrade'.
     # Swiadoma przebudowa wezla: tofu apply -replace='module.talos_lab["<wezel>"]...'
-    ignore_changes = [disk[0].file_id]
+    # started: stan zasilania nie jest konfiguracja - VM wylaczona recznie albo sama
+    # (runner uruchamiany na zadanie) nie moze byc wlaczana przy kazdym apply.
+    ignore_changes = [disk[0].file_id, started]
   }
 }

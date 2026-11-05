@@ -1,0 +1,10 @@
+---
+# VM-ki Debian z obrazu cloud: konto 'ansible' (klucz z admin_ssh_keys w SOPS, sudo bez
+# hasla) zaklada cloud-init przy pierwszym starcie - modul infrastructure/proxmox/modules/vm.
+ansible_host: "{{ net.vms[inventory_hostname].ip }}"
+ansible_user: ansible
+ansible_become: true
+ansible_python_interpreter: /usr/bin/python3
+# Swiezo utworzona VM ma nowy klucz hosta - przyjmowany przy pierwszym polaczeniu,
+# pozniej sprawdzany. Po odbudowie VM: ssh-keygen -R <adres>.
+ansible_ssh_common_args: -o StrictHostKeyChecking=accept-new

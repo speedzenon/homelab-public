@@ -1,0 +1,7 @@
+---
+# Kolekcje Ansible w dokladnych wersjach (instaluje je 'just ansible' do .ansible/,
+# podbija Renovate - manager ansible-galaxy).
+collections:
+  # community.sops.load_vars - sekrety rol z plikow SOPS
+  - name: community.sops
+    version: 2.5.0

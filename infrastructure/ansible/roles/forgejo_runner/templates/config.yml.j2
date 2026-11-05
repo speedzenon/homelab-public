@@ -1,0 +1,38 @@
+# {{ ansible_managed }}
+# Konfiguracja Forgejo Runner (rola forgejo_runner). Zawiera token - 0640 root:{{ forgejo_runner_user }}.
+log:
+  level: info
+
+runner:
+  # Rownolegle joby na tym runnerze
+  capacity: {{ forgejo_runner_capacity }}
+  # Limit czasu joba (domyslnie 3 h)
+  timeout: {{ forgejo_runner_timeout }}
+  # <nazwa z runs-on>:docker://<obraz domyslny> - obraz mozna zmienic w workflow (container:)
+  labels:
+{% for label in forgejo_runner_labels %}
+    - "{{ label }}"
+{% endfor %}
+
+cache:
+  # Serwer cache akcji (actions/cache) dziala w procesie runnera
+  enabled: true
+  dir: "{{ forgejo_runner_home }}/cache"
+
+container:
+  # "" = osobna siec dla kazdego joba (izolacja jobow od siebie)
+  network: ""
+  privileged: false
+  # automount: gniazdo z DOCKER_HOST (rootless podman, jednostka systemd) w jobach jako /var/run/docker.sock
+  docker_host: "{{ forgejo_runner_docker_host }}"
+  # Runner nie odswieza pobranych tagow - swieze obrazy po tygodniowym sprzataniu podmana
+  force_pull: false
+  # Joby nie montuja katalogow z kontenera runnera
+  valid_volumes: []
+
+server:
+  connections:
+    forgejo:
+      url: "{{ forgejo_runner_instance_url }}"
+      uuid: "{{ forgejo_runner_uuid }}"
+      token: "{{ forgejo_runner_secret }}"

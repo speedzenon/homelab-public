@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Wylaczenie VM runnera po {{ forgejo_runner_idle_minutes }} min bez jobow
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/runner-idle-shutdown

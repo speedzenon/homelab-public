@@ -1,0 +1,39 @@
+---
+# Wersja binarki z wydan Forgejo (ta sama numeracja co obraz w rejestrze - po nim
+# sledzi ja Renovate). Po podbiciu: 'just runner-up', 'just ansible runner'.
+# renovate: datasource=docker depName=code.forgejo.org/forgejo/runner
+forgejo_runner_version: 13.2.0
+forgejo_runner_download_url: >-
+  https://code.forgejo.org/forgejo/runner/releases/download/v{{ forgejo_runner_version }}/forgejo-runner-{{ forgejo_runner_version }}-linux-amd64
+# Klucz, ktorym Forgejo podpisuje wydania (dokumentacja instalacji runnera)
+forgejo_runner_gpg_fingerprint: EB114F5E6C0DC2BCDD183550A4B61A2DC5923710
+forgejo_runner_keyserver: hkps://keys.openpgp.org
+
+forgejo_runner_instance_url: https://git.int.dawidkraska.pl/
+forgejo_runner_name: "{{ inventory_hostname }}"
+# Sekret rejestracji (40 znakow hex) - 'just runner-secret'
+forgejo_runner_secret_file: "{{ playbook_dir }}/secrets/forgejo-runner.sops.yaml"
+# Kontekst kubectl do rejestracji w Forgejo (pusty = biezacy)
+forgejo_runner_kube_context: ""
+
+forgejo_runner_capacity: 1
+forgejo_runner_timeout: 1h
+# Obraz domyslny jobow: Node jest potrzebny akcjom JavaScript (checkout, cache, ...)
+forgejo_runner_default_image: docker.io/library/node:24-trixie
+forgejo_runner_labels:
+  - "docker:docker://{{ forgejo_runner_default_image }}"
+  - "ubuntu-latest:docker://{{ forgejo_runner_default_image }}"
+# automount: gniazdo podmana (rootless, uzytkownik runnera) trafia do kazdego joba
+# jako /var/run/docker.sock - joby moga budowac obrazy (podman build / buildah).
+# Cena: job steruje calym podmanem tego uzytkownika. '-' wylacza.
+forgejo_runner_docker_host: automount
+
+# Uzytkownik z rootless podmanem - zaklada go rola podman (podman_rootless_users)
+forgejo_runner_user: runner
+forgejo_runner_home: /var/lib/forgejo-runner
+forgejo_runner_config_dir: /etc/forgejo-runner
+
+# Samowylaczanie VM: po tylu minutach bez zadnego kontenera joba (sprawdzane co 5 min,
+# pierwszy pomiar 5 min po starcie). Start: 'just runner-up'.
+forgejo_runner_idle_shutdown: true
+forgejo_runner_idle_minutes: 30

@@ -83,6 +83,23 @@ repos:
         args: ['--fix', '--config', '.markdownlint.yaml']
 
   # ----------------------------------------------------------
+  # Ansible (infrastructure/ansible) - profil 'production'
+  # ----------------------------------------------------------
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v26.10.1
+    hooks:
+      - id: ansible-lint
+        name: Lint Ansible
+        # Tylko projekt Ansible (bez sciezki ansible-lint przeglada cale repo);
+        # -c: konfiguracja z katalogu projektu. Kolekcje z requirements.yml
+        # instaluje sam (siec do Galaxy).
+        args: ['-c', 'infrastructure/ansible/.ansible-lint', 'infrastructure/ansible']
+        files: '^infrastructure/ansible/'
+        always_run: false
+        # Hook domyslnie wymaga python3.14; CI ma inna wersje z setup-python
+        language_version: python3
+
+  # ----------------------------------------------------------
   # Prevent committing UNENCRYPTED SOPS files
   # ----------------------------------------------------------
   - repo: https://github.com/k8s-at-home/sops-pre-commit

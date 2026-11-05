@@ -105,7 +105,7 @@ flowchart LR
 - Observability (Prometheus, Grafana, Loki), później SIEM
 - IAM (Authentik, OIDC), PKI (Step-CA), OpenBao + External Secrets Operator
 - Polityki: Kyverno, Pod Security `restricted`, network policies (Cilium)
-- Migracja usług legacy z ODROID na platformę; Ansible dla konfiguracji OS-level
+- Migracja usług legacy z ODROID na platformę; kontenery mediów na role Ansible
 
 ## Struktura repozytorium
 
@@ -116,7 +116,7 @@ homelab/
 ├── infrastructure/
 │   ├── mikrotik/          VLAN-y, adresacja, DHCP (OpenTofu + RouterOS)
 │   ├── proxmox/           VM, firewall PVE, obrazy (OpenTofu + bpg); moduł vm/
-│   └── ansible/           Placeholder — konfiguracja OS-level (roadmapa)
+│   └── ansible/           Konfiguracja gości PVE: VM runnera Forgejo Actions (role, uv, ADR 0001)
 ├── talos/
 │   ├── patches/           Patche machine config (szablony renderowane w just)
 │   └── secrets/           Zaszyfrowane sekrety bootstrapu (SOPS)

@@ -1,0 +1,121 @@
+---
+- name: Sekret rejestracji z SOPS (odszyfrowanie na bastionie)
+  community.sops.load_vars:
+    file: "{{ forgejo_runner_secret_file }}"
+  no_log: true
+
+- name: Sekret ma format wymagany przez Forgejo (40 znakow hex)
+  ansible.builtin.assert:
+    that:
+      - forgejo_runner_secret is match('^[0-9a-f]{40}$')
+    fail_msg: "forgejo_runner_secret w {{ forgejo_runner_secret_file }}: oczekiwane 40 znakow hex (just runner-secret)"
+    quiet: true
+  no_log: true
+
+- name: Pakiety
+  ansible.builtin.apt:
+    name:
+      - git
+      - gnupg
+      - ca-certificates
+    state: present
+
+- name: Uzytkownik runnera istnieje (zaklada go rola podman)
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ forgejo_runner_user }}"
+
+- name: Gniazdo API podmana uzytkownika runnera
+  ansible.builtin.set_fact:
+    forgejo_runner_podman_socket: /run/user/{{ ansible_facts.getent_passwd[forgejo_runner_user][1] }}/podman/podman.sock
+    forgejo_runner_uid: "{{ ansible_facts.getent_passwd[forgejo_runner_user][1] }}"
+
+- name: Binarka runnera
+  ansible.builtin.include_tasks: binary.yml
+
+- name: Katalog konfiguracji
+  ansible.builtin.file:
+    path: "{{ forgejo_runner_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ forgejo_runner_user }}"
+    mode: "0750"
+
+- name: Katalog cache akcji
+  ansible.builtin.file:
+    path: "{{ forgejo_runner_home }}/cache"
+    state: directory
+    owner: "{{ forgejo_runner_user }}"
+    group: "{{ forgejo_runner_user }}"
+    mode: "0750"
+
+# Rejestracja offline: Forgejo zapisuje runnera z sekretem, a UUID wylicza z jego
+# pierwszych 16 znakow - powtorzenie z tym samym sekretem nic nie psuje i zwraca ten
+# sam UUID. Sekret idzie przez stdin, nie przez argumenty. W --check pomijane
+# (zapisuje do bazy Forgejo), razem z plikiem konfiguracji.
+- name: Rejestracja runnera w Forgejo (kubectl z bastionu)
+  ansible.builtin.command:
+    argv: >-
+      {{ ['kubectl']
+         + ((forgejo_runner_kube_context | length > 0) | ternary(['--context', forgejo_runner_kube_context], []))
+         + ['-n', 'forgejo', 'exec', '-i', 'deploy/forgejo', '-c', 'forgejo', '--',
+            'forgejo', 'forgejo-cli', 'actions', 'register', '--name', forgejo_runner_name, '--secret-stdin'] }}
+    stdin: "{{ forgejo_runner_secret }}"
+  delegate_to: localhost
+  become: false
+  register: forgejo_runner_register
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: UUID runnera
+  ansible.builtin.set_fact:
+    forgejo_runner_uuid: "{{ forgejo_runner_register.stdout_lines | select('match', '^[0-9a-f-]{36}$') | last | default('') }}"
+  when: not ansible_check_mode
+
+- name: Forgejo zwrocil UUID
+  ansible.builtin.assert:
+    that:
+      - forgejo_runner_uuid | length == 36
+    fail_msg: "forgejo-cli actions register nie zwrocil UUID (Forgejo dziala? kubectl wskazuje lab?)"
+    quiet: true
+  when: not ansible_check_mode
+
+- name: Konfiguracja runnera (z tokenem - bez diffa i logu)
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ forgejo_runner_config_dir }}/config.yml"
+    owner: root
+    group: "{{ forgejo_runner_user }}"
+    mode: "0640"
+  diff: false
+  no_log: true
+  notify: Restart forgejo-runner
+  when: not ansible_check_mode
+
+- name: Jednostka systemd
+  ansible.builtin.template:
+    src: forgejo-runner.service.j2
+    dest: /etc/systemd/system/forgejo-runner.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart forgejo-runner
+
+# Pelny test lancucha (rootless podman uzytkownika runnera, siec, rejestr) na obrazie,
+# ktorego i tak potrzebuja joby - pierwszy job nie czeka potem na pobieranie.
+- name: Obraz domyslny jobow pobiera sie i uruchamia
+  ansible.builtin.command: >-
+    podman --url unix://{{ forgejo_runner_podman_socket }} run --rm {{ forgejo_runner_default_image }} node --version
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Usluga runnera wlaczona i uruchomiona
+  ansible.builtin.systemd:
+    name: forgejo-runner
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Samowylaczanie VM bez jobow
+  ansible.builtin.include_tasks: idle-shutdown.yml

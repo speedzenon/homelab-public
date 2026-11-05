@@ -54,6 +54,65 @@ media-bootstrap +cts="jellyfin downloads arr":
         ssh "root@${host_ip}" bash -s -- "$ct" "$vmid" "$vlan_id" "$ip/${cidr#*/}" "$gw" < scripts/bootstrap-media.sh
     done
 
+# Srodowisko z infrastructure/ansible/uv.lock (uv run), kolekcje z requirements.yml do
+# .ansible/. network.sops.yaml odszyfrowany RAZ: plik tymczasowy sops (0600, sprzatany po
+# komendzie) dostaje wciecie i klucz 'net:' i idzie jako extra vars - group_vars czytaja
+# z niego adresy. ('net', bo top-level 'hosts' to zastrzezona nazwa w Ansible.)
+# --- Ansible: playbook z infrastructure/ansible (np. just ansible runner --check --diff) ---
+ansible playbook *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd infrastructure/ansible
+    uv run ansible-galaxy collection install -r requirements.yml >/dev/null
+    sops exec-file --no-fifo ../network.sops.yaml \
+        "sed -i 's/^/  /; 1i net:' {} && uv run ansible-playbook -e @{} {{playbook}}.yml {{args}}"
+
+# VM-ki z sekcji vms w SOPS (konto 'ansible' z cloud-init). Klucz hosta nowej VM
+# przyjmowany przy pierwszym polaczeniu; po odbudowie VM: ssh-keygen -R <adres>.
+# --- SSH do VM-ki (np. just vm-ssh runner) ---
+vm-ssh name:
+    ssh -o StrictHostKeyChecking=accept-new "ansible@$(sops -d --extract '["vms"]["{{name}}"]["ip"]' {{net}})"
+
+# VM runnera stoi wylaczona; job czeka w kolejce Forgejo do 24 h, wiec mozna tez
+# najpierw zrobic push, a potem uruchomic VM. Sama sie wylacza po 30 min bez jobow.
+# --- Forgejo Actions: uruchomienie VM runnera (przed budowaniem) ---
+runner-up:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    x() { sops -d --extract "$1" {{net}}; }
+    host=$(x '["vms"]["runner"]["host"]'); vmid=$(x '["vms"]["runner"]["vmid"]')
+    h="root@$(x "[\"hosts\"][\"$host\"][\"mgmt_ip\"]")"
+    if ssh "$h" qm status "$vmid" | grep -q running; then
+        echo "VM runner juz dziala"
+    else
+        ssh "$h" qm start "$vmid"
+        echo "VM runner startuje (ok. pol minuty); wylaczy sie sama po 30 min bez jobow"
+    fi
+
+# Czyste wylaczenie (ACPI / agent QEMU), bez czekania na samowylaczenie.
+# --- Forgejo Actions: wylaczenie VM runnera ---
+runner-down:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    x() { sops -d --extract "$1" {{net}}; }
+    host=$(x '["vms"]["runner"]["host"]'); vmid=$(x '["vms"]["runner"]["vmid"]')
+    ssh "root@$(x "[\"hosts\"][\"$host\"][\"mgmt_ip\"]")" qm shutdown "$vmid"
+
+# Sekret od razu szyfrowany: openssl -> sops przez potok, bez ekranu i pliku jawnego.
+# Ten sam sekret Ansible wpisuje runnerowi i rejestruje w Forgejo (forgejo-cli).
+# --- Forgejo Actions: sekret rejestracji runnera (JEDNORAZOWO) ---
+runner-secret:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    f=infrastructure/ansible/secrets/forgejo-runner.sops.yaml
+    test ! -f "$f" || { echo "BLOKADA: $f juz istnieje"; exit 1; }
+    mkdir -p "$(dirname "$f")"
+    tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
+    openssl rand -hex 20 | awk '{print "forgejo_runner_secret: " $0}' | \
+        sops -e --filename-override "$f" --input-type yaml --output-type yaml /dev/stdin > "$tmp"
+    mv "$tmp" "$f"
+    echo "OK: $f zaszyfrowany - commit razem z reszta"
+
 # --- Talos: sekrety klastra (JEDNORAZOWO; zaszyfrowane SOPS, nigdy plaintext w repo) ---
 talos-gen-secrets:
     #!/usr/bin/env bash

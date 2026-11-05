@@ -1,0 +1,79 @@
+---
+# Binarka z wydan Forgejo, weryfikowana podpisem GPG. Pobierana tylko, gdy
+# zainstalowana wersja rozni sie od forgejo_runner_version.
+- name: Zainstalowana wersja runnera
+  ansible.builtin.command: /usr/local/bin/forgejo-runner --version
+  register: forgejo_runner_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Czy potrzebna instalacja
+  ansible.builtin.set_fact:
+    forgejo_runner_install_needed: "{{ forgejo_runner_installed.stdout is not search('v' ~ forgejo_runner_version ~ '$') }}"
+
+# W --check nic sie nie pobiera - tylko informacja, ze wersja sie zmieni
+- name: Wersja do instalacji (tryb --check)
+  ansible.builtin.debug:
+    msg: "zainstalowana: {{ forgejo_runner_installed.stdout | default('brak', true) }}, docelowa: v{{ forgejo_runner_version }}"
+  changed_when: true
+  when: forgejo_runner_install_needed and ansible_check_mode
+
+- name: Pobranie, weryfikacja i instalacja
+  when: forgejo_runner_install_needed and not ansible_check_mode
+  block:
+    - name: Katalog tymczasowy
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: forgejo-runner
+      register: forgejo_runner_tmp
+
+    - name: Katalog GnuPG (tylko na czas weryfikacji)
+      ansible.builtin.file:
+        path: "{{ forgejo_runner_tmp.path }}/gnupg"
+        state: directory
+        mode: "0700"
+
+    - name: Binarka i podpis
+      ansible.builtin.get_url:
+        url: "{{ forgejo_runner_download_url }}{{ item.suffix }}"
+        dest: "{{ forgejo_runner_tmp.path }}/forgejo-runner{{ item.suffix }}"
+        mode: "0600"
+      loop:
+        - suffix: ""
+        - suffix: .asc
+
+    - name: Klucz Forgejo po pelnym odcisku
+      ansible.builtin.command: >-
+        gpg --batch --homedir {{ forgejo_runner_tmp.path }}/gnupg
+        --keyserver {{ forgejo_runner_keyserver }} --recv-keys {{ forgejo_runner_gpg_fingerprint }}
+      changed_when: false
+
+    # VALIDSIG w wyjsciu maszynowym = poprawny podpis kluczem o tym odcisku
+    # (sam napis "Good signature" nie mowi, ktorym kluczem).
+    - name: Weryfikacja podpisu
+      ansible.builtin.command: >-
+        gpg --batch --homedir {{ forgejo_runner_tmp.path }}/gnupg --status-fd 1
+        --verify {{ forgejo_runner_tmp.path }}/forgejo-runner.asc {{ forgejo_runner_tmp.path }}/forgejo-runner
+      register: forgejo_runner_verify
+      changed_when: false
+      failed_when: >-
+        forgejo_runner_verify.rc != 0
+        or forgejo_runner_verify.stdout is not search('VALIDSIG .*' ~ forgejo_runner_gpg_fingerprint)
+
+    - name: Instalacja binarki
+      ansible.builtin.copy:
+        src: "{{ forgejo_runner_tmp.path }}/forgejo-runner"
+        dest: /usr/local/bin/forgejo-runner
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Restart forgejo-runner
+
+  always:
+    - name: Sprzatanie katalogu tymczasowego
+      ansible.builtin.file:
+        path: "{{ forgejo_runner_tmp.path }}"
+        state: absent
+      when: forgejo_runner_tmp.path is defined

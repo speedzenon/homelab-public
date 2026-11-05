@@ -1,0 +1,7 @@
+---
+# Runner Forgejo Actions (docs/runbooks/forgejo-runner.md). Zasoby VM ustawia
+# OpenTofu (infrastructure/proxmox/runner.tf); tutaj tylko konfiguracja wewnatrz.
+# Rootless podman dla uzytkownika runnera - joby to kontenery tego uzytkownika.
+podman_rootless_users:
+  - name: runner
+    home: /var/lib/forgejo-runner

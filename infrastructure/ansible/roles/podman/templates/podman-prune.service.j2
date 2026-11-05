@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Sprzatanie podmana: nieuzywane obrazy, kontenery, sieci i wolumeny
+
+[Service]
+Type=oneshot
+# Podman rootless kazdego uzytkownika przez jego gniazdo API
+{% for user in podman_rootless_users %}
+ExecStart=/usr/bin/podman --url unix:///run/user/{{ podman_uids[user.name] }}/podman/podman.sock system prune --all --force --filter until={{ podman_prune_until }}
+ExecStart=/usr/bin/podman --url unix:///run/user/{{ podman_uids[user.name] }}/podman/podman.sock volume prune --force
+{% endfor %}

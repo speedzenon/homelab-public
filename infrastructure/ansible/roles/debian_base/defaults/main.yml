@@ -1,0 +1,13 @@
+---
+debian_base_timezone: Europe/Warsaw
+# Pelna aktualizacja systemu przy kazdym przebiegu (apt dist-upgrade)
+debian_base_upgrade: true
+debian_base_packages:
+  - ca-certificates
+  - curl
+  - unattended-upgrades
+# Agent QEMU w VM (Proxmox: czyste wylaczanie, adres w GUI, zamrazanie FS przy backupie)
+debian_base_qemu_guest_agent: true
+# Pakiety do usuniecia (np. sshd i postfix z szablonu LXC) - w VM pusto: Ansible
+# laczy sie po SSH
+debian_base_purge: []

@@ -1,0 +1,21 @@
+---
+# Podman rootless: kontenery dzialaja jako zwykly uzytkownik, w jego przestrzeni nazw
+# (uid 0 w kontenerze = uid uzytkownika na zewnatrz). Ucieczka z kontenera konczy sie
+# na tym uzytkowniku, nie na roocie VM.
+podman_packages:
+  - podman
+  # newuidmap/newgidmap - mapowanie zakresow uid/gid dla rootless
+  - uidmap
+  # pasta - siec kontenerow rootless (domyslna w podmanie 5)
+  - passt
+  # sesja D-Bus uzytkownika - systemd --user (gniazdo API podmana)
+  - dbus-user-session
+# Uzytkownicy z rootless podmanem: [{name, home}]. Kazdy dostaje zakres podrzednych
+# uid/gid, lingering (jego systemd startuje przy starcie systemu, bez logowania)
+# i gniazdo API podmana: /run/user/<uid>/podman/podman.sock.
+podman_rootless_users: []
+# Pierwszy podrzedny uid/gid; kolejni uzytkownicy dostaja nastepne zakresy po 65536
+podman_subid_start: 100000
+# Sprzatanie: nieuzywane obrazy, kontenery i sieci starsze niz tydzien, osierocone wolumeny
+podman_prune_until: 168h
+podman_prune_on_calendar: weekly
