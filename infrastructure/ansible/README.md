@@ -68,3 +68,11 @@ ansible-core, kolekcje, Python i wersje w rolach (np. runner) podbija Renovate w
   `pipelining` w `ansible.cfg` — moduły idą przez stdin, bez plików tymczasowych.
 - Przy `delegate_to` zmienne hosta docelowego rozwijają się w kontekście bieżącego
   (`inventory_hostname` = źródło) — adresy hostów docelowych podawać jawnym kluczem.
+- `command` z `stdin:` dokleja na końcu znak nowej linii (domyślne `stdin_add_newline: true`).
+  Program czytający stdin w całości, bez przycinania, dostaje wtedy znak za dużo — przy
+  sekretach `stdin_add_newline: false`.
+- `forgejo-cli actions register` w Forgejo 15: `--secret-stdin` wymaga wartości (typ string),
+  samo `--secret-stdin` kończy się „flag needs an argument”. Rola podaje `--secret "$(cat)"`
+  przez `sh -c` w kontenerze — sekret ze stdin, poza argumentami kubectl i API.
+- `no_log: true` ukrywa także komunikat błędu. Krok z sekretem: `failed_when: false`, a błąd
+  pokazuje osobny `assert` z kodem wyjścia i `stderr` (o ile program nie wypisuje tam sekretu).
