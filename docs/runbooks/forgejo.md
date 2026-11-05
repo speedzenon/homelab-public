@@ -91,7 +91,12 @@ Ponowne podpięcie zachowanego PV do nowego PVC: zdjąć stare powiązanie
 i wskazać PV w `persistence.volumeName`. Świadome skasowanie danych: zmienić
 `persistentVolumeReclaimPolicy` PV na `Delete` — sterownik usunie zvol i target iSCSI.
 
+## Forgejo Actions
+
+Workflowy z `.forgejo/workflows/` wykonuje runner w VM `runner` (etykiety `docker`,
+`ubuntu-latest`; joby mogą budować obrazy). VM zwykle stoi wyłączona — `just runner-up`
+przed budowaniem; job czeka w kolejce do 24 h. Szczegóły: `docs/runbooks/forgejo-runner.md`.
+
 ## Czego jeszcze nie ma
 
-- Runnera Forgejo Actions (faza 6).
 - SSO — logowanie lokalnymi kontami do czasu Authentika.

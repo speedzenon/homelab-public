@@ -1,0 +1,70 @@
+---
+# Wspolna baza gosci Debiana: Python, strefa czasowa, aktualizacje (takze
+# automatyczne bezpieczenstwa), agent QEMU.
+
+# Moduly Ansible potrzebuja Pythona; python3-apt - zeby modul apt dzialal takze
+# w trybie --check. Obraz cloud ma oba, ale raw dziala bez Pythona i zabezpiecza
+# inne obrazy. Dopiero potem zbieranie faktow.
+- name: Python w systemie
+  ansible.builtin.raw: >-
+    { test -x /usr/bin/python3 && dpkg -s python3-apt >/dev/null 2>&1; } ||
+    { apt-get update -q && DEBIAN_FRONTEND=noninteractive apt-get install -y -q python3 python3-apt && echo PYTHON-INSTALLED; }
+  register: debian_base_python
+  changed_when: "'PYTHON-INSTALLED' in debian_base_python.stdout"
+
+- name: Fakty o systemie
+  ansible.builtin.setup:
+
+- name: Strefa czasowa (/etc/localtime)
+  ansible.builtin.file:
+    src: /usr/share/zoneinfo/{{ debian_base_timezone }}
+    dest: /etc/localtime
+    state: link
+    force: true
+
+- name: Strefa czasowa (/etc/timezone)
+  ansible.builtin.copy:
+    content: "{{ debian_base_timezone }}\n"
+    dest: /etc/timezone
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Aktualizacja systemu
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: dist
+  when: debian_base_upgrade | bool
+
+- name: Pakiety bazowe
+  ansible.builtin.apt:
+    name: "{{ debian_base_packages + (['qemu-guest-agent'] if debian_base_qemu_guest_agent | bool else []) }}"
+    state: present
+
+- name: Agent QEMU uruchomiony
+  ansible.builtin.systemd:
+    name: qemu-guest-agent
+    state: started
+  when: debian_base_qemu_guest_agent | bool
+
+- name: Zbedne pakiety
+  ansible.builtin.apt:
+    name: "{{ debian_base_purge }}"
+    state: absent
+    purge: true
+  when: debian_base_purge | length > 0
+
+# unattended-upgrades z domyslna konfiguracja Debiana: tylko poprawki bezpieczenstwa.
+# Bez automatycznego restartu: nowe jadro wchodzi przy nastepnym starcie (VM-ki
+# uruchamiane na zadanie startuja i tak czesto).
+- name: Automatyczne aktualizacje bezpieczenstwa
+  ansible.builtin.copy:
+    content: |
+      // Zarzadzane przez Ansible (rola debian_base) - reczne zmiany zostana nadpisane
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"

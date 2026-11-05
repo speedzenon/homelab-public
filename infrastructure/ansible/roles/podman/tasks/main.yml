@@ -1,0 +1,113 @@
+---
+- name: Pakiety podmana
+  ansible.builtin.apt:
+    name: "{{ podman_packages }}"
+    state: present
+
+- name: Uzytkownicy rootless
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    system: true
+    home: "{{ item.home }}"
+    create_home: true
+    shell: /usr/sbin/nologin
+  loop: "{{ podman_rootless_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# useradd dopisuje zakresy tylko zwyklym uzytkownikom; systemowym - recznie.
+# 65536 identyfikatorow = pelny zakres, jakiego oczekuja obrazy (np. nobody = 65534).
+- name: Zakresy podrzednych uid i gid
+  ansible.builtin.lineinfile:
+    path: "{{ item.0 }}"
+    regexp: "^{{ item.1.name }}:"
+    line: "{{ item.1.name }}:{{ podman_subid_start + 65536 * podman_rootless_users.index(item.1) }}:65536"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ['/etc/subuid', '/etc/subgid'] | product(podman_rootless_users) | list }}"
+  loop_control:
+    label: "{{ item.0 }} {{ item.1.name }}"
+
+- name: Identyfikatory uzytkownikow (sciezki /run/user/<uid>)
+  ansible.builtin.getent:
+    database: passwd
+
+- name: Mapa uzytkownik -> uid
+  ansible.builtin.set_fact:
+    podman_uids: >-
+      {{ dict(podman_rootless_users | map(attribute='name')
+         | zip(podman_rootless_users | map(attribute='name') | map('extract', ansible_facts.getent_passwd) | map(attribute=1))) }}
+  when: podman_rootless_users | length > 0
+
+- name: Lingering - systemd uzytkownika startuje razem z systemem
+  ansible.builtin.command: loginctl enable-linger {{ item.name }}
+  args:
+    creates: /var/lib/systemd/linger/{{ item.name }}
+  loop: "{{ podman_rootless_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# Jednostka uzytkownika: modul systemd w zakresie 'user' jako ten uzytkownik.
+# Bez plikow tymczasowych (pipelining w ansible.cfg), wiec dziala mimo shella nologin.
+- name: Gniazdo API podmana uzytkownika wlaczone i uruchomione
+  ansible.builtin.systemd:
+    name: podman.socket
+    scope: user
+    enabled: true
+    state: started
+  become: true
+  become_user: "{{ item.name }}"
+  environment:
+    XDG_RUNTIME_DIR: /run/user/{{ podman_uids[item.name] }}
+  loop: "{{ podman_rootless_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Jednostki sprzatania
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: /etc/systemd/system/{{ item }}
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - podman-prune.service
+    - podman-prune.timer
+  notify: Przeladowanie systemd
+  when: podman_rootless_users | length > 0
+
+- name: Zastosowanie zmian w jednostkach przed uruchomieniem
+  ansible.builtin.meta: flush_handlers
+
+- name: Timer sprzatania wlaczony
+  ansible.builtin.systemd:
+    name: podman-prune.timer
+    enabled: true
+    state: started
+  when: podman_rootless_users | length > 0
+
+# Podman kazdego uzytkownika dziala i uzywa overlay (vfs - awaryjny sterownik
+# kopiujacy cale warstwy - bylby bardzo wolny). Root laczy sie z gniazdem
+# uzytkownika, wiec sprawdzany jest dokladnie ten podman, z ktorego korzysta usluga.
+- name: Stan podmana uzytkownikow
+  ansible.builtin.command: >-
+    podman --url unix:///run/user/{{ podman_uids[item.name] }}/podman/podman.sock info --format json
+  register: podman_info
+  changed_when: false
+  loop: "{{ podman_rootless_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not ansible_check_mode
+
+- name: Sterownik przechowywania overlay
+  ansible.builtin.assert:
+    that:
+      - (item.stdout | from_json).store.graphDriverName == 'overlay'
+    fail_msg: "{{ item.item.name }}: podman uzywa '{{ (item.stdout | from_json).store.graphDriverName }}' zamiast overlay"
+    quiet: true
+  loop: "{{ podman_info.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not ansible_check_mode

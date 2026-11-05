@@ -90,6 +90,16 @@
       automerge: true,
     },
     {
+      // ansible-core, kolekcje, Python (.python-version), wersja runnera Forgejo.
+      // Merge niczego nie wdraża - zmiany trafiają do kontenerów dopiero przez just.
+      description: 'Ansible (infrastructure/ansible) — osobna grupa',
+      matchFileNames: ['infrastructure/ansible/**'],
+      groupName: 'ansible',
+      prBodyNotes: [
+        'Po merge’u: `just runner-up` (VM runnera zwykle stoi), `just ansible runner --check --diff`, a gdy różnice wyglądają dobrze — `just ansible runner`.',
+      ],
+    },
+    {
       description: 'Major updates — wyraźna etykieta, ostrożny review',
       matchUpdateTypes: ['major'],
       addLabels: ['major-update'],

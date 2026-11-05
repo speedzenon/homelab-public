@@ -79,3 +79,24 @@ variable "extra_disks" {
   type    = list(object({ datastore_id = string, size = number, interface = string }))
   default = []
 }
+
+variable "firewall" {
+  type    = bool
+  default = false # firewall PVE na karcie eth0 (reguly i opcje VM-ki poza modulem)
+}
+
+variable "user_account" {
+  type    = object({ username = string, keys = list(string) })
+  default = null # konto cloud-init (Debian: sudo bez hasla); null = bez konta (Talos)
+}
+
+variable "dns_servers" {
+  type    = list(string)
+  default = [] # serwery DNS przez cloud-init; pusto = bez ustawien
+}
+
+variable "agent_wait_for_ip" {
+  type    = bool
+  default = true # false: tofu nie czeka na adres od agenta QEMU (agent jeszcze
+  # niezainstalowany albo VM zwykle wylaczona)
+}

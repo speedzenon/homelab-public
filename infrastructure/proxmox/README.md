@@ -10,7 +10,10 @@ Provisioning Proxmox VE jako kod (provider `bpg/proxmox`):
 - `firewall.tf` — firewall PVE: ipsety `management` (dostęp do hostów) i `admin`
   (panele usług w gościach), aliasy, reguły i opcje firewalla kontenerów z sekcji
   `lxc`, grupy usług (`storage-srv` na `nas`, `jellyfin-srv`, `downloads-srv`,
-  `arr-srv`),
+  `arr-srv`, `runner-srv`),
+- `runner.tf` — VM runnera Forgejo Actions (obraz cloud Debiana, moduł `modules/vm`
+  z cloud-init, firewall VM); konfiguracja wnętrza w `../ansible`, zwykle wyłączona
+  (`docs/runbooks/forgejo-runner.md`),
 - `main.tf` — read-only smoke-test API (`cluster_nodes`).
 
 ## Uruchamianie

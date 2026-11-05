@@ -1,0 +1,27 @@
+---
+# Runner Forgejo Actions w VM (docs/runbooks/forgejo-runner.md). VM tworzy OpenTofu
+# (infrastructure/proxmox/runner.tf) i zwykle jest wylaczona - najpierw 'just runner-up'.
+# Uruchamianie: just ansible runner [--check --diff] (playbooki w katalogu glownym
+# projektu - wtedy role z ./roles znajduje takze ansible-lint z pre-commit)
+
+- name: Runner Forgejo Actions
+  hosts: runners
+  # debian_base najpierw upewnia sie, ze jest Python, dopiero potem zbiera fakty
+  gather_facts: false
+  pre_tasks:
+    - name: VM dostepna po SSH (po 'just runner-up' start trwa ok. pol minuty)
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+    # Przy pierwszym starcie cloud-init aktualizuje pakiety i trzyma blokade apt -
+    # bez czekania zadania apt ponizej moglyby sie o nia potknac. Kod 2 = zakonczony
+    # z ostrzezeniami (np. przestarzala opcja w danych PVE) - tez gotowe.
+    - name: Cloud-init zakonczyl pierwszy start
+      ansible.builtin.command: cloud-init status --wait
+      register: runner_cloud_init
+      changed_when: false
+      failed_when: runner_cloud_init.rc not in [0, 2]
+  roles:
+    - role: debian_base
+    - role: podman
+    - role: forgejo_runner

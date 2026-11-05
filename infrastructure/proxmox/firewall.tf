@@ -179,6 +179,28 @@ resource "proxmox_virtual_environment_cluster_firewall_security_group" "arr_srv"
   }
 }
 
+# Runner Forgejo Actions (VM, runner.tf) sam laczy sie z Forgejo - nie wystawia
+# zadnej uslugi. Wejscie: SSH dla Ansible i ICMP do diagnostyki, oba z sieci admin.
+resource "proxmox_virtual_environment_cluster_firewall_security_group" "runner_srv" {
+  name    = "runner-srv"
+  comment = "Runner Forgejo Actions: SSH (Ansible) i ICMP z sieci admin"
+  rule {
+    type    = "in"
+    action  = "ACCEPT"
+    source  = "+${proxmox_virtual_environment_firewall_ipset.admin.name}"
+    dport   = "22"
+    proto   = "tcp"
+    comment = "SSH - Ansible z bastionu"
+  }
+  rule {
+    type    = "in"
+    action  = "ACCEPT"
+    source  = "+${proxmox_virtual_environment_firewall_ipset.admin.name}"
+    proto   = "icmp"
+    comment = "ping z sieci admin (diagnostyka)"
+  }
+}
+
 # Grupa podpieta dla nas - dla uslugi storage
 resource "proxmox_virtual_environment_firewall_rules" "nas_storage" {
   node_name = "nas"

@@ -1,0 +1,15 @@
+# Srodowisko Ansible przypiete w repo: uv tworzy z tego .venv/ (dokladne wersje
+# z uv.lock, takze zaleznosci posrednich) - u Ciebie i w CI to samo. Podbija Renovate.
+# Uruchamianie: przez 'just ansible ...' (uv run), nie ansible-playbook z systemu.
+[project]
+name = "homelab-ansible"
+version = "0.0.0"
+description = "Ansible dla gosci Proxmoxa (homelab-public)"
+requires-python = ">=3.13"
+dependencies = [
+  "ansible-core==2.21.5",
+]
+
+[tool.uv]
+# to nie jest pakiet do budowania, tylko srodowisko narzedzi
+package = false

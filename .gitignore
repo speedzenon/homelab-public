@@ -96,6 +96,8 @@ id_ecdsa.*
 # =====================================================
 node_modules/
 __pycache__/
+# srodowisko uv (infrastructure/ansible/.venv) - odtwarzane z uv.lock
+.venv/
 *.pyc
 *.pyo
 dist/

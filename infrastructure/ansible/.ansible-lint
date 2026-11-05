@@ -1,0 +1,9 @@
+---
+# ansible-lint (hook pre-commit uruchamia go z '-c' na ten plik, wiec katalog
+# projektu = infrastructure/ansible). Profil 'production' - najostrzejszy.
+profile: production
+exclude_paths:
+  - .ansible/
+  - .venv/
+  # pliki SOPS to szyfrogram, nie YAML do lintowania
+  - secrets/

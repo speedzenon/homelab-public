@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Wylacza VM runnera, gdy od {{ forgejo_runner_idle_minutes }} min nie ma zadnego kontenera joba.
+# Kontener rootless podmana = proces conmon uzytkownika {{ forgejo_runner_user }} (takze
+# przy budowaniu obrazu - job dziala wtedy we wlasnym kontenerze).
+# Stan w /run (tmpfs): po kazdym starcie liczenie od nowa.
+set -euo pipefail
+
+state=/run/runner-idle-since
+now=$(date +%s)
+
+if pgrep -u {{ forgejo_runner_user }} -x conmon >/dev/null; then
+    echo "$now" > "$state"
+    exit 0
+fi
+
+# Pierwszy pomiar po starcie VM - od teraz liczy sie bezczynnosc
+if [[ ! -f $state ]]; then
+    echo "$now" > "$state"
+    exit 0
+fi
+
+idle=$(( now - $(<"$state") ))
+if (( idle >= {{ forgejo_runner_idle_minutes }} * 60 )); then
+    logger -t runner-idle-shutdown "brak jobow od $(( idle / 60 )) min - wylaczam VM"
+    systemctl poweroff
+fi
