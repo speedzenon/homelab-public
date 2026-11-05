@@ -1,0 +1,46 @@
+# Renovate dla repozytoriow w Forgejo (git.int.dawidkraska.pl): CronJob w klastrze,
+# ktory co godzine przeglada repozytoria dostepne dla konta bota 'renovate'
+# i otwiera PR-y z aktualizacjami zaleznosci. To repo (GitHub) dalej obsluguje
+# Renovate z GitHuba - ten tutaj widzi tylko Forgejo.
+#
+# Chart z rejestru OCI (ghcr.io). Jak przy Forgejo: repoURL BEZ schematu = OCI,
+# bez Secretu repozytorium; Renovate z GitHuba podbija go jako depName
+# ghcr.io/renovatebot/charts/renovate (raz w tygodniu - .github/renovate.json5).
+# Wersja chartu niesie wersje obrazu Renovate (image.tag w values chartu).
+#
+# Namespace z Pod Security 'restricted'. Sekrety poza GitOps: 'just renovate-secret'
+# (token GitHuba z env.sops.yaml) i 'just renovate-bot' (konto bota i jego token
+# prosto z Forgejo); bez nich pod czeka w CreateContainerConfigError.
+# Runbook: docs/runbooks/renovate.md
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: renovate
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: ghcr.io/renovatebot/charts
+      chart: renovate
+      targetRevision: 46.397.1
+      helm:
+        releaseName: renovate
+        valueFiles:
+          - $values/kubernetes/platform/renovate/values.yaml
+    - repoURL: https://github.com/speedzenon/homelab-public.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: renovate
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+        pod-security.kubernetes.io/audit: restricted

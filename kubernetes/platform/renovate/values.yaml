@@ -1,0 +1,86 @@
+# Renovate (chart renovatebot/renovate) - JAWNE values, bez sekretow.
+# CronJob: kazde uruchomienie to jeden pod, ktory przechodzi przez repozytoria
+# dostepne dla konta 'renovate' w Forgejo i konczy prace. Tokeny przychodza
+# z Secretow (nizej, przy existingSecret).
+
+cronjob:
+  # Co godzine (o :17, zeby nie wypadac z innymi zadaniami o pelnej godzinie).
+  # Pora otwierania PR-ow to osobna sprawa - ustawia ja 'schedule' w repozytorium.
+  schedule: "17 * * * *"
+  timeZone: Europe/Warsaw
+  # Nastepne uruchomienie nie startuje, gdy poprzednie jeszcze trwa
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  # Zawieszony przebieg ucinany przed nastepnym (50 min < 1 h); jedna ponowna proba
+  activeDeadlineSeconds: 3000
+  jobBackoffLimit: 1
+  # Po przestoju klastra nie nadrabiaj starych terminow
+  startingDeadlineSeconds: 600
+
+renovate:
+  # Konfiguracja globalna (self-hosted). Ustawienia repozytorium (co aktualizowac,
+  # kiedy, grupowanie) zyja w renovate.json w kazdym repo - tworzy go onboarding PR.
+  # - endpoint: API Forgejo pod ta sama nazwa co w przegladarce; git klonuje po
+  #   clone_url z API (ROOT_URL), wiec i tak potrzebna jest nazwa publiczna
+  # - autodiscover: wszystkie repozytoria, do ktorych bot ma dostep (konto jest
+  #   'restricted' - widzi tylko repo, do ktorych dodasz je jako wspolpracownika)
+  # - gitAuthor: autor commitow; adres = e-mail konta bota (poczta nie istnieje)
+  config: |
+    {
+      "platform": "forgejo",
+      "endpoint": "https://git.int.dawidkraska.pl/api/v1/",
+      "autodiscover": true,
+      "gitAuthor": "Renovate Bot <renovate@git.int.dawidkraska.pl>",
+      "timezone": "Europe/Warsaw",
+      "onboardingConfig": {
+        "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+        "extends": ["config:recommended"]
+      }
+    }
+  # Pod Security 'restricted' na poziomie kontenera
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+# Pod Security 'restricted' na poziomie poda. Uzytkownik z obrazu (USER 12021,
+# 'ubuntu' z containerbase) - bez nadpisywania uid/gid, bo katalogi narzedzi
+# instalowanych w locie maja uprawnienia ustawione pod niego. System plikow NIE
+# tylko do odczytu: Renovate doinstalowuje w trakcie pracy menedzery pakietow
+# (npm, pip, ...) potrzebne do aktualizacji plikow lock.
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Zmienne srodowiskowe z dwoch Secretow (poza GitOps):
+# - renovate-env: RENOVATE_GITHUB_COM_TOKEN (GitHub, tylko odczyt - changelogi
+#   i limity API), z env.sops.yaml przez 'just renovate-secret'
+# - renovate-forgejo-token: RENOVATE_TOKEN (konto bota w Forgejo), tworzy go
+#   'just renovate-bot' prosto z Forgejo - token nie lezy w gicie
+existingSecret: renovate-env
+envFrom:
+  - secretRef:
+      name: renovate-forgejo-token
+
+# Wlasny ServiceAccount bez tokenu API - Renovate nie rozmawia z Kubernetesem.
+# Chart nie umie wylaczyc montowania tokenu, wiec SA powstaje tutaj (extraObjects),
+# a chart tylko go uzywa.
+serviceAccount:
+  create: false
+  name: renovate
+extraObjects:
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: renovate
+    automountServiceAccountToken: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    memory: 2Gi
