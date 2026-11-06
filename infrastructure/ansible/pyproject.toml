@@ -7,7 +7,7 @@ version = "0.0.0"
 description = "Ansible dla gosci Proxmoxa (homelab-public)"
 requires-python = ">=3.13"
 dependencies = [
-  "ansible-core==2.21.5",
+  "ansible-core==2.22.0",
 ]
 
 [tool.uv]
