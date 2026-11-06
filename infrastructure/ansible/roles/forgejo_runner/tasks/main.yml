@@ -53,19 +53,41 @@
 # pierwszych 16 znakow - powtorzenie z tym samym sekretem nic nie psuje i zwraca ten
 # sam UUID. Sekret idzie przez stdin, nie przez argumenty. W --check pomijane
 # (zapisuje do bazy Forgejo), razem z plikiem konfiguracji.
+# W Forgejo 15 '--secret-stdin' jest flaga z wartoscia (typ string) - samo konczy sie
+# "flag needs an argument". Dlatego udokumentowane '--secret', a wartosc wstawia
+# powloka w kontenerze z wlasnego stdin ("$(cat)", obcina tez koncowe nowe linie):
+# sekret nie trafia do argumentow kubectl na bastionie ani do zadania exec w API
+# Kubernetesa, tylko na chwile do argumentow procesu forgejo w podzie (ten proces
+# i tak zapisuje go do bazy). Nazwa runnera jako $1 - bez cytowania w skrypcie.
+# stdin_add_newline: false - Ansible domyslnie dokleja do stdin znak nowej linii.
+# no_log ukrywa caly wynik (argumenty zawieraja sekret), wiec blad pokazuje osobny
+# krok: kod wyjscia i stderr - komunikaty kubectl / forgejo-cli nie zawieraja sekretu.
 - name: Rejestracja runnera w Forgejo (kubectl z bastionu)
   ansible.builtin.command:
     argv: >-
       {{ ['kubectl']
          + ((forgejo_runner_kube_context | length > 0) | ternary(['--context', forgejo_runner_kube_context], []))
          + ['-n', 'forgejo', 'exec', '-i', 'deploy/forgejo', '-c', 'forgejo', '--',
-            'forgejo', 'forgejo-cli', 'actions', 'register', '--name', forgejo_runner_name, '--secret-stdin'] }}
+            'sh', '-c', 'exec forgejo forgejo-cli actions register --name "$1" --secret "$(cat)"',
+            'register', forgejo_runner_name] }}
     stdin: "{{ forgejo_runner_secret }}"
+    stdin_add_newline: false
   delegate_to: localhost
   become: false
   register: forgejo_runner_register
   changed_when: false
+  failed_when: false
   no_log: true
+  when: not ansible_check_mode
+
+- name: Rejestracja w Forgejo powiodla sie
+  ansible.builtin.assert:
+    that:
+      - forgejo_runner_register.rc | default(1) == 0
+    fail_msg: >-
+      Rejestracja nieudana (kod {{ forgejo_runner_register.rc | default('-') }}):
+      {{ forgejo_runner_register.stderr | default('', true) or forgejo_runner_register.msg | default('') }}
+    quiet: true
   when: not ansible_check_mode
 
 - name: UUID runnera
