@@ -1,0 +1,18 @@
+---
+# Kolekcja rol wspolnych dla homelab-public i prywatnego repo homelab-home.
+# Inne repo instaluje ja z gita z przypietym commitem (README.md obok);
+# numer wersji jest informacyjny - o tym, co trafia do gosci, decyduje SHA.
+namespace: speedzenon
+name: homelab
+version: 1.0.0
+readme: README.md
+authors:
+  - speedzenon
+description: Role wspolne dla gosci Proxmoxa w homelabie (baza Debiana, rootless podman)
+repository: https://github.com/speedzenon/homelab-public
+tags:
+  - linux
+  - infrastructure
+dependencies: {}
+build_ignore:
+  - "*.retry"

@@ -8,7 +8,7 @@ i dlaczego na żądanie: `docs/adr/0002-runner-w-vm-na-zadanie.md`.
 | Co | Gdzie |
 |---|---|
 | VM | OpenTofu: `infrastructure/proxmox/runner.tf` (2 vCPU, 4 GB, 32 GB); adres i VMID w SOPS (`vms.runner`) |
-| Konfiguracja | Ansible: `infrastructure/ansible/runner.yml` (role `debian_base`, `podman`, `forgejo_runner`) |
+| Konfiguracja | Ansible: `infrastructure/ansible/runner.yml` (role `speedzenon.homelab.debian_base`, `speedzenon.homelab.podman`, `forgejo_runner`) |
 | Sekret rejestracji | `infrastructure/ansible/secrets/forgejo-runner.sops.yaml` (`just runner-secret`) |
 | Firewall | grupa `runner-srv` (`firewall.tf`): wejście tylko SSH i ICMP z sieci admin |
 | Start / stop | `just runner-up` / `just runner-down`; samowyłączanie po 30 min bez jobów |
