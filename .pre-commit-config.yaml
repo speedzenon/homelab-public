@@ -86,7 +86,7 @@ repos:
   # Ansible (infrastructure/ansible) - profil 'production'
   # ----------------------------------------------------------
   - repo: https://github.com/ansible/ansible-lint
-    rev: v26.10.1
+    rev: v26.11.0
     hooks:
       - id: ansible-lint
         name: Lint Ansible
