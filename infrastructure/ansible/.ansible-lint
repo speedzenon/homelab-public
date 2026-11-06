@@ -7,3 +7,8 @@ exclude_paths:
   - .venv/
   # pliki SOPS to szyfrogram, nie YAML do lintowania
   - secrets/
+skip_list:
+  # Kolekcja speedzenon.homelab nie trafia do Ansible Galaxy - inne repo instaluje ja
+  # z gita po SHA, wiec dziennik zmian to historia gita, a licencja repo to osobna decyzja
+  - galaxy[no-changelog]
+  - galaxy[no-license]

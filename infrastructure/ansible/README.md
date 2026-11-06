@@ -5,13 +5,16 @@ pracę z OpenTofu: `docs/adr/0001-ansible-dla-gosci-proxmoxa.md`.
 
 ```text
 infrastructure/ansible/
-├── ansible.cfg              inventory, role, kolekcje w .ansible/ (poza gitem)
+├── ansible.cfg              inventory, role, kolekcje: pobrane w .ansible/ (poza gitem) + collections/
 ├── pyproject.toml, uv.lock  ansible-core w dokładnej wersji (uv)
 ├── requirements.yml         kolekcje w dokładnych wersjach
 ├── inventories/lab/         gości z SOPS; adresy NIE tutaj, tylko w network.sops.yaml
-├── roles/
-│   ├── debian_base/         Python, strefa czasowa, aktualizacje, agent QEMU
-│   ├── podman/              rootless podman dla użytkowników + tygodniowe sprzątanie
+├── collections/ansible_collections/speedzenon/homelab/
+│   │                        kolekcja ról wspólnych z prywatnym repo homelab-home (ADR 0003)
+│   └── roles/
+│       ├── debian_base/     Python, strefa czasowa, aktualizacje, agent QEMU
+│       └── podman/          rootless podman dla użytkowników + tygodniowe sprzątanie
+├── roles/                   role tylko tego repo
 │   └── forgejo_runner/      runner Forgejo Actions + samowyłączanie VM (docs/runbooks/forgejo-runner.md)
 ├── secrets/                 pliki *.sops.yaml dla ról (np. sekret runnera)
 └── runner.yml               playbook: VM runnera
@@ -48,8 +51,20 @@ sprawdzany — po odbudowie VM `ssh-keygen -R <adres>`.
 2. OpenTofu: plik `<nazwa>.tf` w `infrastructure/proxmox/` na wzór `runner.tf` (moduł `vm`
    z `user_account`, grupa reguł w `firewall.tf`), `just tofu-apply`.
 3. Inventory: host w grupie pod `vms` w `inventories/lab/hosts.yml`, zmienne ról
-   w `host_vars/<nazwa>.yml`; playbook `<nazwa>.yml` w katalogu głównym projektu.
+   w `host_vars/<nazwa>.yml`; playbook `<nazwa>.yml` w katalogu głównym projektu
+   (role wspólne pełną nazwą: `speedzenon.homelab.debian_base`).
 4. `just ansible <nazwa>`.
+
+## Kolekcja `speedzenon.homelab`
+
+Role przydatne poza tym repo (dziś `debian_base`, `podman`) leżą w kolekcji w
+`collections/` — tutaj playbooki biorą je prosto z drzewa repo (`collections_path`),
+a prywatne `homelab-home` instaluje kolekcję z gita po pełnym SHA commita z `main`
+(szczegóły: README kolekcji). Role tylko dla tego repo zostają w `roles/`.
+
+Zmiana w roli kolekcji działa w obu repo: przed merge'em `--check --diff` tutaj, a po
+podbiciu SHA (PR Renovate w `homelab-home`) — tam. Bez adresów, nazw usług domowych
+i sekretów: kolekcja jest publiczna.
 
 ## Aktualizacje
 

@@ -1,6 +1,7 @@
 # ADR 0001: Ansible do konfiguracji gości Proxmoxa
 
-- **Status:** przyjęta, 05.11.2026
+- **Status:** przyjęta, 05.11.2026; uzupełniona przez ADR 0003 (role wspólne w kolekcji
+  `speedzenon.homelab`, goście usług domowych w prywatnym repo `homelab-home`)
 - **Dotyczy:** wnętrze VM-ek i kontenerów LXC na Proxmox VE (pierwsza: VM runnera Forgejo Actions)
 
 ## Kontekst
