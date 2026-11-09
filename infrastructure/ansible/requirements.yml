@@ -4,4 +4,4 @@
 collections:
   # community.sops.load_vars - sekrety rol z plikow SOPS
   - name: community.sops
-    version: 2.5.0
+    version: 2.5.1
