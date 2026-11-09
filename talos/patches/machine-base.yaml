@@ -3,6 +3,18 @@
 # UWAGA: 'talosctl upgrade' NIE czyta install.image - bez --image bierze czysty
 # installer i gubi system extensions (iscsi-tools -> pada democratic-csi).
 # Upgrade tylko przez 'just talos-upgrade', ktory podaje obraz z Image Factory.
+#
+# kubernetesTalosAPIAccess: pody z namespace'u talos-backup moga dostac
+# talosconfig (CRD serviceaccounts.talos.dev) - TYLKO z rola os:etcd:backup,
+# czyli pobranie snapshotu etcd. Bez tej sekcji Talos nie tworzy CRD i
+# Application 'talos-backup' nie zsynchronizuje sie. Zmiana bez restartu wezla.
 machine:
   install:
     disk: /dev/sda
+  features:
+    kubernetesTalosAPIAccess:
+      enabled: true
+      allowedRoles:
+        - os:etcd:backup
+      allowedKubernetesNamespaces:
+        - talos-backup
