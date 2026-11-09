@@ -27,6 +27,16 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          # Poziom Poda: tozsamosc i seccomp dla calego Poda (Trivy KSV-0118
+          # wymaga go tutaj - sam securityContext kontenera to za malo).
+          # Poziom kontenera: to, co istnieje tylko tam (eskalacja, capabilities,
+          # rootfs tylko do odczytu).
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: talos-backup
               image: ghcr.io/siderolabs/talos-backup:v0.1.0
@@ -46,16 +56,11 @@ spec:
                 - name: ENABLE_COMPRESSION
                   value: "true"
               securityContext:
-                runAsUser: 1000
-                runAsGroup: 1000
-                runAsNonRoot: true
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
                 capabilities:
                   drop:
                     - ALL
-                seccompProfile:
-                  type: RuntimeDefault
               resources:
                 requests:
                   cpu: 50m

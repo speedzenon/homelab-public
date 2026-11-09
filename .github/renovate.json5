@@ -28,6 +28,12 @@
     managerFilePatterns: ['/^kubernetes/apps/.+\\.ya?ml$/'],
   },
 
+  // Obrazy w zwyklych manifestach (np. CronJob talos-backup). Manager kubernetes
+  // tez nie ma domyslnych wzorcow - bez tego obraz zostalby na wieczna wersje.
+  kubernetes: {
+    managerFilePatterns: ['/^kubernetes/infrastructure/.+\\.ya?ml$/'],
+  },
+
   // Hooki pre-commit (gitleaks, yamllint, ...) — manager domyślnie wyłączony.
   'pre-commit': {
     enabled: true,
