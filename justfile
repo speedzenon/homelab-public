@@ -302,6 +302,20 @@ volsync-secret ns pvc repo=(ns + "/" + pvc):
 backup-status:
     kubectl get replicationsources.volsync.backube -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,DURATION:.status.lastSyncDuration,NEXT_SYNC:.status.nextSyncTime,RESULT:.status.latestMoverStatus.result'
 
+# Plik: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (klucz B2 tylko do bucketa kopii etcd),
+# AWS_REGION, CUSTOM_S3_ENDPOINT, BUCKET. Odszyfrowanie pada -> kubectl sie nie uruchamia.
+# Secret talos-backup-s3 (dostep do bucketa B2 z kopiami etcd) dla talos-backup (poza GitOps)
+talos-backup-secret:
+    kubectl create namespace talos-backup --dry-run=client -o yaml | kubectl apply -f -
+    sops exec-file --no-fifo --output-type dotenv kubernetes/platform/talos-backup/s3.sops.yaml \
+        'kubectl create secret generic talos-backup-s3 --namespace talos-backup --from-env-file={} --dry-run=client -o yaml' | \
+        kubectl apply --server-side --force-conflicts -f -
+
+# Kopie etcd: ostatnie joby CronJoba talos-backup (wynik, start, czas trwania)
+talos-backup-status:
+    kubectl -n talos-backup get cronjob talos-backup
+    kubectl -n talos-backup get jobs --sort-by=.status.startTime -o custom-columns='JOB:.metadata.name,OK:.status.succeeded,FAILED:.status.failed,START:.status.startTime,END:.status.completionTime'
+
 # Konto 'restricted': widzi tylko repozytoria, do ktorych dodasz je jako wspolpracownika
 # (Write). Haslo losowe i nieuzywane - bot pracuje wylacznie tokenem. Token idzie
 # z kubectl prosto do Secretu renovate-forgejo-token: nie ma go na ekranie, w argumentach

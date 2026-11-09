@@ -1,0 +1,46 @@
+# talos-backup (Sidero Labs): CronJob, ktory przez API Talosa robi snapshot etcd,
+# szyfruje go kluczem age z .sops.yaml i wysyla do osobnego bucketa B2.
+#
+# Po co: dwa z trzech control-plane'ow sa na g-flipie (stripe ZFS bez
+# redundancji) - jego utrata to utrata kworum etcd. Ze snapshotem odtworzenie
+# to 'talosctl bootstrap --recover-from'; bez niego klaster od zera i reczne
+# podpinanie PV do istniejacych zvoli na nas.
+#
+# Wymaga w machine config (talos/patches/machine-base.yaml):
+# machine.features.kubernetesTalosAPIAccess z rola os:etcd:backup dla
+# namespace'u talos-backup - dopiero wtedy Talos tworzy CRD
+# serviceaccounts.talos.dev. Do tego czasu sync konczy sie bledem i jest
+# ponawiany (SkipDryRunOnMissingResource + retry, jak w 'backup').
+# Sekret S3: just talos-backup-secret.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: talos-backup
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/speedzenon/homelab-public.git
+    targetRevision: main
+    path: kubernetes/infrastructure/talos-backup
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: talos-backup
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+        pod-security.kubernetes.io/audit: restricted
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

@@ -1,0 +1,85 @@
+# Snapshot etcd co 6 h (cron w UTC) -> zstd -> age -> B2:
+#   <BUCKET>/lab/lab-<RFC3339>.snap.zst.age
+#
+# - szyfrowanie kluczem age z .sops.yaml - odszyfrowanie wymaga tego samego
+#   klucza co SOPS (kopia poza labem). Snapshot zawiera Secrety Kubernetesa
+# - retencja: regula lifecycle na bucketcie w B2 (talos-backup niczego nie
+#   kasuje). OSOBNY bucket: regula na caly bucket z restikiem VolSync usunelaby
+#   jego pliki pack
+# - sekret talos-backup-s3 (just talos-backup-secret): klucz B2 tylko do tego
+#   bucketa, endpoint, region, nazwa bucketa
+# - Pod Security 'restricted': uid 1000, bez eskalacji, drop ALL, seccomp,
+#   rootfs tylko do odczytu (snapshot powstaje w /tmp = emptyDir)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: talos-backup
+  namespace: talos-backup
+spec:
+  schedule: "17 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          restartPolicy: Never
+          # Poziom Poda: tozsamosc i seccomp dla calego Poda (Trivy KSV-0118
+          # wymaga go tutaj - sam securityContext kontenera to za malo).
+          # Poziom kontenera: to, co istnieje tylko tam (eskalacja, capabilities,
+          # rootfs tylko do odczytu).
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: talos-backup
+              image: ghcr.io/siderolabs/talos-backup:v0.1.0
+              command:
+                - /talos-backup
+              workingDir: /tmp
+              envFrom:
+                - secretRef:
+                    name: talos-backup-s3
+              env:
+                - name: CLUSTER_NAME
+                  value: lab
+                - name: S3_PREFIX
+                  value: lab
+                - name: AGE_RECIPIENT_PUBLIC_KEY
+                  value: age1xce70l2z2l5hfuu3ynek4lrwpfa0vz4yxtjh299vq2d609azqyrqdfgke2
+                - name: ENABLE_COMPRESSION
+                  value: "true"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: talos
+                  mountPath: /.talos
+                - name: talos-secrets
+                  mountPath: /var/run/secrets/talos.dev
+                  readOnly: true
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: talos
+              emptyDir: {}
+            - name: talos-secrets
+              secret:
+                secretName: talos-backup-secrets
