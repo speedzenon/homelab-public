@@ -27,8 +27,21 @@ _versions:
 tofu-plan dir="proxmox":
     cd infrastructure/{{dir}} && sops exec-env secrets.sops.yaml 'tofu plan'
 
+# Kopia takze po nieudanym apply (czesciowy apply tez zmienia stan). Kod wyjscia
+# zostaje kodem tofu; blad kopii tylko ostrzega.
+# Apply, a po nim kopia stanu do B2 (tofu-state-backup)
 tofu-apply dir="proxmox":
-    cd infrastructure/{{dir}} && sops exec-env secrets.sops.yaml 'tofu apply'
+    #!/usr/bin/env bash
+    set -uo pipefail
+    rc=0
+    (cd infrastructure/{{dir}} && sops exec-env secrets.sops.yaml 'tofu apply') || rc=$?
+    "{{just_executable()}}" tofu-state-backup \
+        || echo "UWAGA: kopia stanu nie powiodla sie - uruchom 'just tofu-state-backup'" >&2
+    exit "$rc"
+
+# --- Kopia stanu OpenTofu -> restic -> B2 (mode: backup | snapshots | verify) ---
+tofu-state-backup mode="backup":
+    sops exec-env kubernetes/platform/volsync/restic.sops.yaml 'scripts/tofu-state-backup.sh {{mode}}'
 
 # Skrypt plynie przez SSH na stdin perla - na hoscie nic nie zostaje.
 # --- PVE: audyt firewalla gosci i szablonow (tylko odczyt). Kod: 0 OK, 1 odstepstwa, 2 blad ---
