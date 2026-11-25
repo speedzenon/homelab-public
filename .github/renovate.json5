@@ -1,105 +1,122 @@
 {
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
-
-  // Presety bazowe — sprawdzone zestawy ustawień od społeczności Renovate
   extends: [
-    'config:recommended',                       // rozsądne defaulty
-    ':semanticCommits',                         // commity w formacie Conventional Commits
-    'schedule:nonOfficeHours',                  // PR-y poza godzinami pracy
-    'helpers:pinGitHubActionDigestsToSemver',   // pinuj Actions do SHA + komentarz wersji
+    'config:recommended',
+    ':semanticCommits',
+    'schedule:nonOfficeHours',
+    'helpers:pinGitHubActionDigestsToSemver',
   ],
-
   timezone: 'Europe/Warsaw',
-  labels: ['dependencies'],
-
-  // Limity, by nie zalać się PR-ami
+  labels: [
+    'dependencies',
+  ],
   prHourlyLimit: 4,
   prConcurrentLimit: 10,
-
-  // Dashboard jako GitHub Issue — centralny widok wszystkich zależności
-  dependencyDashboard: true,
-  dependencyDashboardTitle: 'Renovate Dependency Dashboard',
-
-  // Wersje chartów w Application-ach ArgoCD (Cilium, ArgoCD, democratic-csi,
-  // snapshot-controller). Manager argocd NIE ma domyślnych wzorców plików —
-  // bez tego Renovate nigdy nie podbijał rdzenia stacku. justfile czyta wersje
-  // z tych plików, więc jeden bump aktualizuje też instalację helm CLI.
+  dependencyDashboard: {
+    enabled: true,
+    title: 'Renovate Dependency Dashboard',
+  },
   argocd: {
-    managerFilePatterns: ['/^kubernetes/apps/.+\\.ya?ml$/'],
+    managerFilePatterns: [
+      '/^kubernetes/apps/.+\\.ya?ml$/',
+    ],
   },
-
-  // Obrazy w zwyklych manifestach (np. CronJob talos-backup). Manager kubernetes
-  // tez nie ma domyslnych wzorcow - bez tego obraz zostalby na wieczna wersje.
   kubernetes: {
-    managerFilePatterns: ['/^kubernetes/infrastructure/.+\\.ya?ml$/'],
+    managerFilePatterns: [
+      '/^kubernetes/infrastructure/.+\\.ya?ml$/',
+    ],
   },
-
-  // Hooki pre-commit (gitleaks, yamllint, ...) — manager domyślnie wyłączony.
   'pre-commit': {
     enabled: true,
   },
-
   packageRules: [
     {
       description: 'Grupuj aktualizacje minor i patch w jeden PR (bez chartów klastra)',
-      matchManagers: ['!argocd'],
-      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      matchManagers: [
+        '!argocd',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+        'digest',
+      ],
       groupName: 'all non-major dependencies',
     },
     {
-      // Merge = automated sync: roll CNI (Cilium), upgrade samego ArgoCD, sterownika CSI.
       description: 'Charty klastra (ArgoCD Apps) — osobny PR na chart, osobna etykieta',
-      matchManagers: ['argocd'],
-      addLabels: ['cluster-core'],
+      matchManagers: [
+        'argocd',
+      ],
+      addLabels: [
+        'cluster-core',
+      ],
     },
     {
-      // Wersja CRD musi pasować do kontrolera w Cilium (Cilium 1.20 <-> v1.6.3).
-      // Samodzielny bump mógłby wgrać CRD, których zainstalowany Cilium nie obsługuje.
-      // Manager argocd nadaje źródłom git depName = repoURL.
       description: 'Gateway API CRD — bez automatycznych bumpów, podbijane ręcznie przed Cilium',
-      matchManagers: ['argocd'],
-      matchDepNames: ['https://github.com/kubernetes-sigs/gateway-api.git'],
+      matchManagers: [
+        'argocd',
+      ],
+      matchDepNames: [
+        'https://github.com/kubernetes-sigs/gateway-api.git',
+      ],
       enabled: false,
     },
     {
       description: 'Cilium — w każdym PR przypomnienie o sprzężonej wersji CRD Gateway API',
-      matchManagers: ['argocd'],
-      matchDepNames: ['cilium'],
+      matchManagers: [
+        'argocd',
+      ],
+      matchDepNames: [
+        'cilium',
+      ],
       prBodyNotes: [
         '⚠️ Sprawdź wymaganą wersję CRD Gateway API dla tej wersji Cilium (docs Cilium: Gateway API Support → Prerequisites). Jeśli jest nowsza niż w `kubernetes/apps/gateway-api-crds.yaml`, podbij ją osobnym PR-em i zmerguj go **przed** tym: nowsze CRD obsługują stare wersje API, odwrotnie nie.',
       ],
     },
     {
-      // Chart z rejestru OCI: depName = repoURL/chart, datasource docker.
-      // Minor/patch w obrębie 17.x = poprawki Forgejo 15 LTS — zwykłe PR-y.
       description: 'Forgejo — major chartu tylko po akceptacji w Dependency Dashboard (linia LTS)',
-      matchManagers: ['argocd'],
-      matchDepNames: ['code.forgejo.org/forgejo-helm/forgejo'],
-      matchUpdateTypes: ['major'],
+      matchManagers: [
+        'argocd',
+      ],
+      matchDepNames: [
+        'code.forgejo.org/forgejo-helm/forgejo',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
       dependencyDashboardApproval: true,
       prBodyNotes: [
         '⚠️ Sprawdź w README chartu (sekcja „Upgrading”), którą wersję Forgejo instaluje ten major. Trzymamy się linii LTS: 15 LTS do 15.07.2027, potem skok na 19 LTS. Przed upgrade’em kopia wolumenu `forgejo-data` (VolumeSnapshot) — migracje bazy są jednokierunkowe.',
       ],
     },
     {
-      // Renovate wydaje nowe wersje kilka razy dziennie, a chart idzie za każdą -
-      // bez tej reguły codziennie nowy PR. Raz w tygodniu wystarczy.
       description: 'Chart Renovate (dla repozytoriów w Forgejo) — raz w tygodniu',
-      matchManagers: ['argocd'],
-      matchDepNames: ['ghcr.io/renovatebot/charts/renovate'],
-      schedule: ['* 0-5 * * 1'],
+      matchManagers: [
+        'argocd',
+      ],
+      matchDepNames: [
+        'ghcr.io/renovatebot/charts/renovate',
+      ],
+      schedule: [
+        '* 0-5 * * 1',
+      ],
     },
     {
       description: 'Auto-merge pinów SHA dla GitHub Actions (niskie ryzyko)',
-      matchManagers: ['github-actions'],
-      matchUpdateTypes: ['digest', 'pin'],
+      matchManagers: [
+        'github-actions',
+      ],
+      matchUpdateTypes: [
+        'digest',
+        'pin',
+      ],
       automerge: true,
     },
     {
-      // ansible-core, kolekcje, Python (.python-version), wersja runnera Forgejo.
-      // Merge niczego nie wdraża - zmiany trafiają do kontenerów dopiero przez just.
       description: 'Ansible (infrastructure/ansible) — osobna grupa',
-      matchFileNames: ['infrastructure/ansible/**'],
+      matchFileNames: [
+        'infrastructure/ansible/**',
+      ],
       groupName: 'ansible',
       prBodyNotes: [
         'Po merge’u: `just runner-up` (VM runnera zwykle stoi), `just ansible runner --check --diff`, a gdy różnice wyglądają dobrze — `just ansible runner`.',
@@ -107,17 +124,17 @@
     },
     {
       description: 'Major updates — wyraźna etykieta, ostrożny review',
-      matchUpdateTypes: ['major'],
-      addLabels: ['major-update'],
+      matchUpdateTypes: [
+        'major',
+      ],
+      addLabels: [
+        'major-update',
+      ],
     },
   ],
-
   customManagers: [
     {
       customType: 'regex',
-      // Dwa zapisy pod komentarzem '# renovate: ...':
-      //   NAZWA_VERSION="x"  - skrypty, bloki run: w workflow (np. TOFU_VERSION)
-      //   klucz: x           - YAML (np. pin node w .pre-commit-config.yaml)
       description: 'Aktualizuj wersje oznaczone komentarzem # renovate: (NAZWA_VERSION= oraz klucz: w YAML)',
       managerFilePatterns: [
         '/\\.ya?ml$/',
