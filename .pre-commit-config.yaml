@@ -10,7 +10,7 @@ default_install_hook_types:
 
 default_language_version:
   # renovate: datasource=node-version depName=node
-  node: 26.13.0
+  node: 26.13.1
 
 repos:
   # ----------------------------------------------------------
@@ -76,7 +76,7 @@ repos:
   # Markdown linting
   # ----------------------------------------------------------
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.50.0
+    rev: v0.50.1
     hooks:
       - id: markdownlint
         name: Lint Markdown files
@@ -86,7 +86,7 @@ repos:
   # Ansible (infrastructure/ansible) - profil 'production'
   # ----------------------------------------------------------
   - repo: https://github.com/ansible/ansible-lint
-    rev: v26.11.0
+    rev: v26.11.1
     hooks:
       - id: ansible-lint
         name: Lint Ansible
